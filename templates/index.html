@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mathnasium Automations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1e3a5f;
+      color: white;
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 1.6rem; font-weight: 700; }
+    header p  { font-size: 0.9rem; opacity: 0.75; margin-top: 2px; }
+    .logo { font-size: 2rem; }
+
+    main { max-width: 960px; margin: 0 auto; padding: 36px 24px; }
+
+    h2 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin: 0 0 16px;
+    }
+
+    .section { margin-bottom: 40px; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: box-shadow 0.2s;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+
+    .card-header { display: flex; align-items: flex-start; gap: 12px; }
+    .card-icon   { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+    .card-title  { font-size: 1rem; font-weight: 700; color: #111; }
+    .card-desc   { font-size: 0.85rem; color: #6b7280; line-height: 1.5; }
+
+    .card-footer { margin-top: auto; }
+
+    .btn {
+      display: inline-block;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+
+    .btn-primary   { background: #1e3a5f; color: white; }
+    .btn-success   { background: #16a34a; color: white; }
+    .btn-purple    { background: #7c3aed; color: white; }
+    .btn-disabled  { background: #e5e7eb; color: #9ca3af; cursor: default; }
+    .btn-disabled:hover { opacity: 1; }
+
+    /* Output panel */
+    #output-panel {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 320px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem;
+      z-index: 100;
+      flex-direction: column;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+    }
+    #output-panel.active { display: flex; }
+
+    #output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      flex-shrink: 0;
+    }
+    #output-title  { font-weight: 700; color: #94a3b8; font-size: 0.8rem; letter-spacing: 0.05em; }
+    #output-status { font-size: 0.75rem; }
+    #output-close  { background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    #output-close:hover { background: #334155; color: white; }
+
+    #output-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      line-height: 1.6;
+    }
+    .output-line { white-space: pre-wrap; word-break: break-all; }
+    .output-line.success { color: #4ade80; }
+    .output-line.error   { color: #f87171; }
+    .output-line.done    { color: #60a5fa; font-weight: bold; margin-top: 8px; }
+
+    .spinner {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 2px solid #64748b;
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .running-indicator {
+      display: none;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #60a5fa;
+    }
+    .running-indicator.active { display: flex; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🤖</div>
+  <div>
+    <h1>Mathnasium Automations</h1>
+    <p>Click a button to run a script or open a web app</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Mathnasium Scripts ── -->
+  <div class="section">
+    <h2>Mathnasium</h2>
+    <div class="cards">
+
+      {% for id, s in scripts.items() if s.category == "Mathnasium" %}
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">{{ s.icon }}</div>
+          <div>
+            <div class="card-title">{{ s.name }}</div>
+          </div>
+        </div>
+        <div class="card-desc">{{ s.description }}</div>
+        <div class="card-footer">
+          <button class="btn btn-primary" onclick="runScript('{{ id }}', '{{ s.name }}')">▶ Run</button>
+          <span class="running-indicator" id="running-{{ id }}">
+            <span class="spinner"></span> Running…
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% for s in interactive %}
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">{{ s.icon }}</div>
+          <div>
+            <div class="card-title">{{ s.name }}</div>
+          </div>
+        </div>
+        <div class="card-desc">{{ s.description }}</div>
+        <div class="card-footer">
+          <button class="btn btn-purple" onclick="openTerminal('{{ s.id }}')">↗ Open in Terminal</button>
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+
+  <!-- ── Fantasy Baseball Scripts ── -->
+  <div class="section">
+    <h2>Fantasy Baseball</h2>
+    <div class="cards">
+
+      {% for id, s in scripts.items() if s.category == "Fantasy Baseball" %}
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">{{ s.icon }}</div>
+          <div>
+            <div class="card-title">{{ s.name }}</div>
+          </div>
+        </div>
+        <div class="card-desc">{{ s.description }}</div>
+        <div class="card-footer">
+          <button class="btn btn-primary" onclick="runScript('{{ id }}', '{{ s.name }}')">▶ Run</button>
+          <span class="running-indicator" id="running-{{ id }}">
+            <span class="spinner"></span> Running…
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% for app in web_apps %}
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">{{ app.icon }}</div>
+          <div>
+            <div class="card-title">{{ app.name }}</div>
+          </div>
+        </div>
+        <div class="card-desc">{{ app.description }}</div>
+        <div class="card-footer">
+          <a class="btn btn-success" href="/launch/{{ app.id }}" target="_blank">↗ Open</a>
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Output Panel ── -->
+<div id="output-panel">
+  <div id="output-header">
+    <span id="output-title">OUTPUT</span>
+    <span id="output-status"></span>
+    <button id="output-close" onclick="closeOutput()">✕</button>
+  </div>
+  <div id="output-body"></div>
+</div>
+
+<script>
+  let currentSource = null;
+  let currentScriptId = null;
+
+  function runScript(id, name) {
+    if (currentSource) currentSource.close();
+
+    currentScriptId = id;
+    const panel  = document.getElementById("output-panel");
+    const body   = document.getElementById("output-body");
+    const title  = document.getElementById("output-title");
+    const status = document.getElementById("output-status");
+    const runBtn = document.querySelector(`button[onclick="runScript('${id}', '${name}')"]`);
+    const indicator = document.getElementById(`running-${id}`);
+
+    body.innerHTML = "";
+    title.textContent = name.toUpperCase();
+    status.innerHTML = '<span style="color:#60a5fa">● Running…</span>';
+    panel.classList.add("active");
+    if (runBtn) runBtn.disabled = true;
+    if (indicator) indicator.classList.add("active");
+
+    currentSource = new EventSource(`/run/${id}`);
+
+    currentSource.onmessage = function(e) {
+      const text = JSON.parse(e.data);
+
+      if (text === "__DONE__") {
+        status.innerHTML = '<span style="color:#4ade80">✓ Done</span>';
+        addLine("✓ Completed successfully.", "done");
+        finish();
+        return;
+      }
+      if (text.startsWith("__ERROR__")) {
+        status.innerHTML = '<span style="color:#f87171">✗ Failed</span>';
+        addLine("✗ " + text, "error");
+        finish();
+        return;
+      }
+
+      const cls = text.startsWith("✅") || text.startsWith("[cc") ? "success" : "";
+      addLine(text, cls);
+    };
+
+    currentSource.onerror = function() {
+      status.innerHTML = '<span style="color:#f87171">✗ Connection lost</span>';
+      finish();
+    };
+
+    function addLine(text, cls) {
+      const line = document.createElement("div");
+      line.className = "output-line " + (cls || "");
+      line.textContent = text;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function finish() {
+      currentSource.close();
+      currentSource = null;
+      if (runBtn) runBtn.disabled = false;
+      if (indicator) indicator.classList.remove("active");
+    }
+  }
+
+  function openTerminal(id) {
+    fetch(`/open-terminal/${id}`);
+  }
+
+  function closeOutput() {
+    if (currentSource) {
+      currentSource.close();
+      currentSource = null;
+    }
+    document.getElementById("output-panel").classList.remove("active");
+    if (currentScriptId) {
+      const indicator = document.getElementById(`running-${currentScriptId}`);
+      if (indicator) indicator.classList.remove("active");
+      currentScriptId = null;
+    }
+  }
+</script>
+
+</body>
+</html>
