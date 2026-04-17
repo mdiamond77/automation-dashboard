@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Projects — Mathnasium Automations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+
+    header { background: #1e3a5f; color: white; padding: 24px 40px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    header h1 { font-size: 1.6rem; font-weight: 700; }
+    header p  { font-size: 0.9rem; opacity: 0.75; margin-top: 2px; }
+    .logo { font-size: 2rem; }
+    .nav-link { margin-left: auto; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; }
+    .nav-link:hover { color: white; }
+
+    main { max-width: 960px; margin: 0 auto; padding: 36px 24px; }
+    h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7280; margin: 0 0 16px; }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 12px; transition: box-shadow 0.2s; }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    .card-header { display: flex; align-items: flex-start; gap: 12px; }
+    .card-icon { font-size: 1.8rem; line-height: 1; flex-shrink: 0; }
+    .card-title { font-size: 1rem; font-weight: 700; color: #111; }
+    .card-desc { font-size: 0.85rem; color: #6b7280; line-height: 1.5; }
+    .card-footer { margin-top: auto; }
+    .btn { display: inline-block; padding: 9px 20px; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-success { background: #16a34a; color: white; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏆</div>
+  <div>
+    <h1>Personal Projects</h1>
+    <p>Web apps and tools for personal use</p>
+  </div>
+  <a class="nav-link" href="/">← Dashboard</a>
+</header>
+
+<main>
+  <h2>Fantasy Baseball</h2>
+  <div class="cards">
+    {% for app in web_apps %}
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">{{ app.icon }}</div>
+        <div><div class="card-title">{{ app.name }}</div></div>
+      </div>
+      <div class="card-desc">{{ app.description }}</div>
+      <div class="card-footer">
+        <a class="btn btn-success" href="/launch/{{ app.id }}" target="_blank">↗ Open</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</main>
+
+</body>
+</html>
