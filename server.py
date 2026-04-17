@@ -5,12 +5,15 @@ Always-on local web server on port 8080.
 
 import json
 import os
+import re
 import socket
 import subprocess
 import time
-from datetime import datetime as _dt
+from datetime import datetime as _dt, timezone, timedelta
 
-from flask import Flask, Response, redirect, render_template, stream_with_context
+from flask import Flask, Response, redirect, render_template, request, jsonify, stream_with_context
+
+PROJECTS_FILE = os.environ.get("PROJECTS_FILE", os.path.join(os.path.dirname(__file__), "future_projects.json"))
 
 app = Flask(__name__)
 
@@ -204,11 +207,82 @@ def _fmt_run(entry: dict | None) -> dict | None:
         return None
     ts = entry.get("timestamp", "")
     try:
-        dt = _dt.strptime(ts, "%Y-%m-%dT%H:%M:%SZ")
-        friendly = dt.strftime("%-m/%-d/%Y %-I:%M %p") + " UTC"
+        dt_utc = _dt.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        # EST = UTC-5, EDT = UTC-4 (rough DST: second Sun Mar → first Sun Nov)
+        month = dt_utc.month
+        is_edt = 3 <= month <= 11  # close enough for display purposes
+        et_offset = timedelta(hours=-4 if is_edt else -5)
+        dt_et = dt_utc + et_offset
+        label = "EDT" if is_edt else "EST"
+        friendly = dt_et.strftime("%-m/%-d/%Y %-I:%M %p") + f" {label}"
     except ValueError:
         friendly = ts
     return {**entry, "friendly_time": friendly}
+
+
+def _load_projects() -> list[dict]:
+    try:
+        with open(PROJECTS_FILE) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def _save_projects(projects: list[dict]) -> None:
+    with open(PROJECTS_FILE, "w") as f:
+        json.dump(projects, f, indent=2)
+
+
+def _slugify(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+@app.route("/api/projects", methods=["GET"])
+def get_projects():
+    return jsonify(_load_projects())
+
+
+@app.route("/api/projects", methods=["POST"])
+def create_project():
+    data = request.get_json(force=True)
+    projects = _load_projects()
+    new_project = {
+        "id": _slugify(data.get("title", "untitled")) + "-" + str(len(projects)),
+        "title": data.get("title", ""),
+        "description": data.get("description", ""),
+        "priority": data.get("priority", "Medium"),
+        "ease": data.get("ease", "Medium"),
+        "frequency": data.get("frequency", "Monthly"),
+        "status": data.get("status", "Planned"),
+    }
+    projects.append(new_project)
+    _save_projects(projects)
+    return jsonify(new_project), 201
+
+
+@app.route("/api/projects/<project_id>", methods=["PATCH"])
+def update_project(project_id):
+    projects = _load_projects()
+    for project in projects:
+        if project["id"] == project_id:
+            data = request.get_json(force=True)
+            allowed = {"title", "description", "priority", "ease", "frequency", "status"}
+            for key, value in data.items():
+                if key in allowed:
+                    project[key] = value
+            _save_projects(projects)
+            return jsonify(project)
+    return jsonify({"error": "not found"}), 404
+
+
+@app.route("/api/projects/<project_id>", methods=["DELETE"])
+def delete_project(project_id):
+    projects = _load_projects()
+    updated = [p for p in projects if p["id"] != project_id]
+    if len(updated) == len(projects):
+        return jsonify({"error": "not found"}), 404
+    _save_projects(updated)
+    return jsonify({"ok": True})
 
 
 @app.route("/reports")
