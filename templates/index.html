@@ -149,14 +149,15 @@
 
           <td>
             {% set last = r.last_auto or r.last_manual %}
-            {% if last and last.drive_link %}
-              <a class="delivery-link" href="{{ last.drive_link }}" target="_blank">📁 Drive</a>
-            {% endif %}
-            {% if last and last.status == 'success' %}
-              <span style="color:#6b7280;font-size:0.8rem;">📧 Emailed</span>
-            {% endif %}
             {% if not last %}
               <span class="status-none">—</span>
+            {% else %}
+              {% if last.drive_link %}
+                <a class="delivery-link" href="{{ last.drive_link }}" target="_blank">📁 Drive</a>
+              {% endif %}
+              {% if last.status == 'success' %}
+                <span style="color:#6b7280;font-size:0.8rem;">📧 Emailed</span>
+              {% endif %}
             {% endif %}
           </td>
 
@@ -285,11 +286,17 @@
       const input = document.createElement("input");
       input.type = "text";
       input.value = currentValue;
+      let committed = false;
       input.addEventListener("keydown", e => {
-        if (e.key === "Enter")  commitEdit(td, projectId, field, input.value);
+        if (e.key === "Enter") {
+          committed = true;
+          commitEdit(td, projectId, field, input.value);
+        }
         if (e.key === "Escape") cancelEdit(td, projectId, field, currentValue);
       });
-      input.addEventListener("blur", () => commitEdit(td, projectId, field, input.value));
+      input.addEventListener("blur", () => {
+        if (!committed) commitEdit(td, projectId, field, input.value);
+      });
       td.innerHTML = "";
       td.appendChild(input);
       input.focus();
@@ -411,7 +418,7 @@
     _cellCache[id] = cell.innerHTML;
     cell.innerHTML = `
       <div class="confirm-prompt">
-        <div class="confirm-question">${question}</div>
+        <div class="confirm-question">${escHtml(question)}</div>
         <div class="confirm-buttons">
           <button class="btn btn-confirm" onclick="runScript('${id}', '${name}')">Yes, run it</button>
           <button class="btn btn-cancel" onclick="cancelConfirm('${id}')">Cancel</button>
