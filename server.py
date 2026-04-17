@@ -56,6 +56,13 @@ SCRIPTS["page-goals"] = {
 # ── Reports registry (shown on /reports page) ─────────────────────────────────
 REPORTS = [
     {
+        "id": "cc-newsletter",
+        "name": "CC Newsletter Update",
+        "schedule": "Monthly",
+        "script_id": "cc-newsletter",
+        "run_log_path": None,
+    },
+    {
         "id": "student-page-goals",
         "name": "Student Page Goals",
         "schedule": "1st of month",
@@ -93,14 +100,34 @@ WEB_APPS = [
 INTERACTIVE = []
 
 
+@app.route("/reports")
+def reports_redirect():
+    return redirect("/")
+
+
+@app.route("/personal")
+def personal_page():
+    return render_template("personal.html", web_apps=WEB_APPS)
+
+
 @app.route("/")
 def index():
-    return render_template(
-        "index.html",
-        scripts=SCRIPTS,
-        web_apps=WEB_APPS,
-        interactive=INTERACTIVE,
-    )
+    report_rows = []
+    for report in REPORTS:
+        path = report.get("run_log_path")
+        log = _load_run_log(path) if path else []
+        auto_runs   = [r for r in log if r.get("trigger") == "auto"]
+        manual_runs = [r for r in log if r.get("trigger") == "manual"]
+        script = SCRIPTS.get(report["script_id"], {})
+        report_rows.append({
+            **report,
+            "icon":        script.get("icon", "📄"),
+            "description": script.get("description", ""),
+            "confirm":     script.get("confirm"),
+            "last_auto":   _fmt_run(auto_runs[-1]   if auto_runs   else None),
+            "last_manual": _fmt_run(manual_runs[-1] if manual_runs else None),
+        })
+    return render_template("index.html", reports=report_rows)
 
 
 @app.route("/run/<script_id>")
@@ -288,21 +315,6 @@ def delete_project(project_id):
         return jsonify({"error": "not found"}), 404
     _save_projects(updated)
     return jsonify({"ok": True})
-
-
-@app.route("/reports")
-def reports_page():
-    report_rows = []
-    for report in REPORTS:
-        log = _load_run_log(report["run_log_path"])
-        auto_runs   = [r for r in log if r.get("trigger") == "auto"]
-        manual_runs = [r for r in log if r.get("trigger") == "manual"]
-        report_rows.append({
-            **report,
-            "last_auto":   _fmt_run(auto_runs[-1]   if auto_runs   else None),
-            "last_manual": _fmt_run(manual_runs[-1] if manual_runs else None),
-        })
-    return render_template("reports.html", reports=report_rows)
 
 
 if __name__ == "__main__":
