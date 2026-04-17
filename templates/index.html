@@ -143,6 +143,20 @@
       color: #60a5fa;
     }
     .running-indicator.active { display: flex; }
+
+    .confirm-prompt {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .confirm-question {
+      font-size: 0.85rem;
+      color: #374151;
+      font-weight: 500;
+    }
+    .confirm-buttons { display: flex; gap: 8px; }
+    .btn-confirm  { background: #16a34a; color: white; }
+    .btn-cancel   { background: #e5e7eb; color: #374151; }
   </style>
 </head>
 <body>
@@ -153,6 +167,7 @@
     <h1>Mathnasium Automations</h1>
     <p>Click a button to run a script or open a web app</p>
   </div>
+  <a href="/reports" style="margin-left:auto;color:rgba(255,255,255,0.8);text-decoration:none;font-size:0.9rem;">📊 Reports</a>
 </header>
 
 <main>
@@ -162,7 +177,7 @@
     <h2>Mathnasium</h2>
     <div class="cards">
 
-      {% for id, s in scripts.items() if s.category == "Mathnasium" %}
+      {% for id, s in scripts.items() if s.category == "Mathnasium" and not s.hidden %}
       <div class="card">
         <div class="card-header">
           <div class="card-icon">{{ s.icon }}</div>
@@ -171,26 +186,15 @@
           </div>
         </div>
         <div class="card-desc">{{ s.description }}</div>
-        <div class="card-footer">
+        <div class="card-footer" id="footer-{{ id }}">
+          {% if s.confirm %}
+          <button class="btn btn-primary" onclick="askConfirm('{{ id }}', '{{ s.name }}', '{{ s.confirm }}')">▶ Run</button>
+          {% else %}
           <button class="btn btn-primary" onclick="runScript('{{ id }}', '{{ s.name }}')">▶ Run</button>
+          {% endif %}
           <span class="running-indicator" id="running-{{ id }}">
             <span class="spinner"></span> Running…
           </span>
-        </div>
-      </div>
-      {% endfor %}
-
-      {% for s in interactive %}
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon">{{ s.icon }}</div>
-          <div>
-            <div class="card-title">{{ s.name }}</div>
-          </div>
-        </div>
-        <div class="card-desc">{{ s.description }}</div>
-        <div class="card-footer">
-          <button class="btn btn-purple" onclick="openTerminal('{{ s.id }}')">↗ Open in Terminal</button>
         </div>
       </div>
       {% endfor %}
@@ -203,7 +207,7 @@
     <h2>Fantasy Baseball</h2>
     <div class="cards">
 
-      {% for id, s in scripts.items() if s.category == "Fantasy Baseball" %}
+      {% for id, s in scripts.items() if s.category == "Fantasy Baseball" and not s.hidden %}
       <div class="card">
         <div class="card-header">
           <div class="card-icon">{{ s.icon }}</div>
@@ -314,6 +318,25 @@
       if (runBtn) runBtn.disabled = false;
       if (indicator) indicator.classList.remove("active");
     }
+  }
+
+  const _footerCache = {};
+
+  function askConfirm(id, name, question) {
+    const footer = document.getElementById(`footer-${id}`);
+    _footerCache[id] = footer.innerHTML;
+    footer.innerHTML = `
+      <div class="confirm-prompt">
+        <div class="confirm-question">${question}</div>
+        <div class="confirm-buttons">
+          <button class="btn btn-confirm" onclick="runScript('${id}', '${name}')">Yes, run it</button>
+          <button class="btn btn-cancel" onclick="cancelConfirm('${id}')">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function cancelConfirm(id) {
+    document.getElementById(`footer-${id}`).innerHTML = _footerCache[id];
   }
 
   function openTerminal(id) {

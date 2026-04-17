@@ -4,10 +4,12 @@ Always-on local web server on port 8080.
 """
 
 import json
+import json as _json
 import os
 import socket
 import subprocess
 import time
+from datetime import datetime as _dt
 
 from flask import Flask, Response, redirect, render_template, stream_with_context
 
@@ -25,23 +27,39 @@ SCRIPTS = {
         "icon": "📋",
         "category": "Mathnasium",
     },
-    "appointy-export": {
-        "name": "Appointy Export",
-        "description": "Exports appointment data from Appointy. Normally runs automatically each night via GitHub Actions.",
-        "command": [PYTHON, "scripts/appointy_export.py"],
-        "cwd": "/Users/mattdiamond/Mathnasium_automation",
-        "icon": "📤",
+    "cc-newsletter": {
+        "name": "CC Newsletter Update",
+        "description": "Updates the monthly Constant Contact newsletter. Edit your content in CC first, then run this.",
+        "command": [PYTHON, "main.py"],
+        "cwd": "/Users/mattdiamond/cc-newsletter-automation",
+        "icon": "📧",
         "category": "Mathnasium",
+        "confirm": "Have you finished editing the content in Constant Contact?",
+        "before": ["radius-cc-lists"],
     },
-    "fantasy-report": {
-        "name": "Fantasy Baseball Report",
-        "description": "Generates today's fantasy baseball matchup report and saves it as a PDF.",
-        "command": [PYTHON, "run_report.py", "--force", "--no-print"],
-        "cwd": "/Users/mattdiamond/fantasy_baseball",
-        "icon": "⚾",
-        "category": "Fantasy Baseball",
-    },
+
 }
+
+SCRIPTS["page-goals"] = {
+    "name": "Student Page Goals",
+    "description": "Calculates monthly page goals for each student from Radius data.",
+    "command": [PYTHON, "main.py", "--trigger", "manual"],
+    "cwd": "/Users/mattdiamond/mathnasium-page-goals",
+    "icon": "📊",
+    "category": "Mathnasium",
+    "hidden": True,
+}
+
+# ── Reports registry (shown on /reports page) ─────────────────────────────────
+REPORTS = [
+    {
+        "id": "student-page-goals",
+        "name": "Student Page Goals",
+        "schedule": "1st of month",
+        "script_id": "page-goals",
+        "run_log_path": "/Users/mattdiamond/mathnasium-page-goals/run_log.json",
+    },
+]
 
 # ── Web apps (launch server if needed, then open in browser) ──────────────────
 WEB_APPS = [
@@ -69,17 +87,7 @@ WEB_APPS = [
     },
 ]
 
-# ── Interactive scripts (require terminal input — open in Terminal) ────────────
-INTERACTIVE = [
-    {
-        "id": "cc-newsletter",
-        "name": "CC Newsletter Update",
-        "description": "Updates the monthly Constant Contact newsletter. Edit your content in CC first, then run this.",
-        "command": f"cd ~/cc-newsletter-automation && {PYTHON} main.py",
-        "icon": "📧",
-        "category": "Mathnasium",
-    },
-]
+INTERACTIVE = []
 
 
 @app.route("/")
@@ -98,27 +106,37 @@ def run_script(script_id):
         return "Script not found", 404
 
     script = SCRIPTS[script_id]
+    sequence = [
+        SCRIPTS[sid] for sid in script.get("before", []) if sid in SCRIPTS
+    ] + [script]
 
     def generate():
-        try:
-            process = subprocess.Popen(
-                script["command"],
-                cwd=script["cwd"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                env={**os.environ, "PYTHONUNBUFFERED": "1"},
-            )
-            for line in process.stdout:
-                yield f"data: {json.dumps(line.rstrip())}\n\n"
-            process.wait()
-            code = process.returncode
-            status = "__DONE__" if code == 0 else f"__ERROR__ (exit code {code})"
-            yield f"data: {json.dumps(status)}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps(f'Error: {e}')}\n\n"
-            yield f"data: {json.dumps('__ERROR__')}\n\n"
+        for idx, s in enumerate(sequence):
+            if idx > 0:
+                yield f"data: {json.dumps('─' * 40)}\n\n"
+            if len(sequence) > 1:
+                yield f"data: {json.dumps('▶ ' + s['name'])}\n\n"
+            try:
+                process = subprocess.Popen(
+                    s["command"],
+                    cwd=s["cwd"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                )
+                for line in process.stdout:
+                    yield f"data: {json.dumps(line.rstrip())}\n\n"
+                process.wait()
+                if process.returncode != 0:
+                    yield f"data: {json.dumps(f'__ERROR__ (exit code {process.returncode})')}\n\n"
+                    return
+            except Exception as e:
+                yield f"data: {json.dumps(f'Error: {e}')}\n\n"
+                yield f"data: {json.dumps('__ERROR__')}\n\n"
+                return
+        yield f"data: {json.dumps('__DONE__')}\n\n"
 
     return Response(
         stream_with_context(generate()),
@@ -172,6 +190,41 @@ def open_terminal(script_id):
     apple = f'tell application "Terminal" to do script "{cmd}"'
     subprocess.Popen(["osascript", "-e", apple])
     return ("", 204)
+
+
+def _load_run_log(path: str) -> list[dict]:
+    try:
+        with open(path) as f:
+            return _json.load(f)
+    except (FileNotFoundError, _json.JSONDecodeError):
+        return []
+
+
+def _fmt_run(entry: dict | None) -> dict | None:
+    if entry is None:
+        return None
+    ts = entry.get("timestamp", "")
+    try:
+        dt = _dt.strptime(ts, "%Y-%m-%dT%H:%M:%SZ")
+        friendly = dt.strftime("%-m/%-d/%Y %-I:%M %p") + " UTC"
+    except ValueError:
+        friendly = ts
+    return {**entry, "friendly_time": friendly}
+
+
+@app.route("/reports")
+def reports_page():
+    report_rows = []
+    for report in REPORTS:
+        log = _load_run_log(report["run_log_path"])
+        auto_runs   = [r for r in log if r.get("trigger") == "auto"]
+        manual_runs = [r for r in log if r.get("trigger") == "manual"]
+        report_rows.append({
+            **report,
+            "last_auto":   _fmt_run(auto_runs[-1]   if auto_runs   else None),
+            "last_manual": _fmt_run(manual_runs[-1] if manual_runs else None),
+        })
+    return render_template("reports.html", reports=report_rows)
 
 
 if __name__ == "__main__":

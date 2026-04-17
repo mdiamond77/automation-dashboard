@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — Mathnasium Automations</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+
+    header { background: #1e3a5f; color: white; padding: 24px 40px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    header h1 { font-size: 1.6rem; font-weight: 700; }
+    header p  { font-size: 0.9rem; opacity: 0.75; margin-top: 2px; }
+    .logo { font-size: 2rem; }
+    .nav-link { margin-left: auto; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; }
+    .nav-link:hover { color: white; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 36px 24px; }
+
+    h2 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7280; margin: 0 0 16px; }
+
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    th { background: #1e3a5f; color: white; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 16px; text-align: left; }
+    td { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; font-size: 0.875rem; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+
+    .status-ok  { color: #16a34a; font-weight: 600; }
+    .status-err { color: #dc2626; font-weight: 600; }
+    .status-none { color: #9ca3af; font-style: italic; }
+
+    .btn { display: inline-block; padding: 7px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #1e3a5f; color: white; }
+
+    .delivery-link { color: #1e3a5f; text-decoration: none; font-weight: 500; margin-right: 8px; }
+    .delivery-link:hover { text-decoration: underline; }
+
+    .running-indicator { display: none; align-items: center; font-size: 0.8rem; color: #60a5fa; margin-left: 8px; }
+    .running-indicator.active { display: inline-flex; }
+    .spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid #64748b; border-top-color: #60a5fa; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #output-panel { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 320px; background: #0f172a; color: #e2e8f0; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; z-index: 100; flex-direction: column; box-shadow: 0 -4px 24px rgba(0,0,0,0.4); }
+    #output-panel.active { display: flex; }
+    #output-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: #1e293b; border-bottom: 1px solid #334155; flex-shrink: 0; }
+    #output-title  { font-weight: 700; color: #94a3b8; font-size: 0.8rem; letter-spacing: 0.05em; }
+    #output-status { font-size: 0.75rem; }
+    #output-close  { background: none; border: none; color: #64748b; font-size: 1.2rem; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    #output-close:hover { background: #334155; color: white; }
+    #output-body   { flex: 1; overflow-y: auto; padding: 16px 20px; line-height: 1.6; }
+    .output-line { white-space: pre-wrap; word-break: break-all; }
+    .output-line.done  { color: #60a5fa; font-weight: bold; margin-top: 8px; }
+    .output-line.error { color: #f87171; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📊</div>
+  <div>
+    <h1>Reports</h1>
+    <p>Scheduled automations — run history and manual triggers</p>
+  </div>
+  <a class="nav-link" href="/">← Back to Dashboard</a>
+</header>
+
+<main>
+  <h2>Scheduled Reports</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Report</th>
+        <th>Schedule</th>
+        <th>Last Auto Run</th>
+        <th>Last Manual Run</th>
+        <th>Delivery</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr>
+        <td><strong>{{ r.name }}</strong></td>
+        <td>{{ r.schedule }}</td>
+
+        <td>
+          {% if r.last_auto %}
+            <span class="{{ 'status-ok' if r.last_auto.status == 'success' else 'status-err' }}">
+              {{ '✓' if r.last_auto.status == 'success' else '✗' }}
+            </span>
+            {{ r.last_auto.friendly_time }}
+          {% else %}
+            <span class="status-none">Never</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if r.last_manual %}
+            <span class="{{ 'status-ok' if r.last_manual.status == 'success' else 'status-err' }}">
+              {{ '✓' if r.last_manual.status == 'success' else '✗' }}
+            </span>
+            {{ r.last_manual.friendly_time }}
+          {% else %}
+            <span class="status-none">Never</span>
+          {% endif %}
+        </td>
+
+        <td>
+          {% set last = r.last_auto or r.last_manual %}
+          {% if last and last.drive_link %}
+            <a class="delivery-link" href="{{ last.drive_link }}" target="_blank">📁 Drive</a>
+          {% endif %}
+          {% if last and last.status == 'success' %}
+            <span style="color:#6b7280;font-size:0.8rem;">📧 Emailed</span>
+          {% endif %}
+          {% if not last %}
+            <span class="status-none">—</span>
+          {% endif %}
+        </td>
+
+        <td>
+          <button class="btn btn-primary" id="run-btn-{{ r.script_id }}"
+                  onclick="runScript('{{ r.script_id }}', '{{ r.name }}')">▶ Run Now</button>
+          <span class="running-indicator" id="running-{{ r.script_id }}">
+            <span class="spinner"></span> Running…
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+
+<div id="output-panel">
+  <div id="output-header">
+    <span id="output-title">OUTPUT</span>
+    <span id="output-status"></span>
+    <button id="output-close" onclick="closeOutput()">✕</button>
+  </div>
+  <div id="output-body"></div>
+</div>
+
+<script>
+  let currentSource = null;
+  let currentScriptId = null;
+
+  function runScript(id, name) {
+    if (currentSource) currentSource.close();
+    currentScriptId = id;
+    const panel    = document.getElementById("output-panel");
+    const body     = document.getElementById("output-body");
+    const title    = document.getElementById("output-title");
+    const status   = document.getElementById("output-status");
+    const runBtn   = document.getElementById(`run-btn-${id}`);
+    const indicator = document.getElementById(`running-${id}`);
+
+    body.innerHTML = "";
+    title.textContent = name.toUpperCase();
+    status.innerHTML = '<span style="color:#60a5fa">● Running…</span>';
+    panel.classList.add("active");
+    if (runBtn) runBtn.disabled = true;
+    if (indicator) indicator.classList.add("active");
+
+    currentSource = new EventSource(`/run/${id}`);
+
+    currentSource.onmessage = function(e) {
+      const text = JSON.parse(e.data);
+      if (text === "__DONE__") {
+        status.innerHTML = '<span style="color:#4ade80">✓ Done</span>';
+        addLine("✓ Completed successfully.", "done");
+        finish();
+        setTimeout(() => location.reload(), 1500);
+        return;
+      }
+      if (text.startsWith("__ERROR__")) {
+        status.innerHTML = '<span style="color:#f87171">✗ Failed</span>';
+        addLine("✗ " + text, "error");
+        finish();
+        return;
+      }
+      addLine(text, "");
+    };
+
+    currentSource.onerror = function() {
+      status.innerHTML = '<span style="color:#f87171">✗ Connection lost</span>';
+      finish();
+    };
+
+    function addLine(text, cls) {
+      const line = document.createElement("div");
+      line.className = "output-line " + cls;
+      line.textContent = text;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function finish() {
+      currentSource.close();
+      currentSource = null;
+      if (runBtn) runBtn.disabled = false;
+      if (indicator) indicator.classList.remove("active");
+    }
+  }
+
+  function closeOutput() {
+    if (currentSource) { currentSource.close(); currentSource = null; }
+    document.getElementById("output-panel").classList.remove("active");
+    if (currentScriptId) {
+      const indicator = document.getElementById(`running-${currentScriptId}`);
+      if (indicator) indicator.classList.remove("active");
+      currentScriptId = null;
+    }
+  }
+</script>
+
+</body>
+</html>
