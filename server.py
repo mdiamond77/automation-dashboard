@@ -9,6 +9,7 @@ import re
 import socket
 import subprocess
 import time
+import uuid
 from datetime import datetime as _dt, timezone, timedelta
 
 from flask import Flask, Response, redirect, render_template, request, jsonify, stream_with_context
@@ -246,8 +247,12 @@ def get_projects():
 def create_project():
     data = request.get_json(force=True)
     projects = _load_projects()
+    base_id = _slugify(data.get("title", "untitled")) or "project"
+    new_id = base_id + "-" + uuid.uuid4().hex[:8]
+    while any(p["id"] == new_id for p in projects):
+        new_id = base_id + "-" + uuid.uuid4().hex[:8]
     new_project = {
-        "id": _slugify(data.get("title", "untitled")) + "-" + str(len(projects)),
+        "id": new_id,
         "title": data.get("title", ""),
         "description": data.get("description", ""),
         "priority": data.get("priority", "Medium"),
