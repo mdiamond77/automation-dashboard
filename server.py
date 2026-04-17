@@ -4,7 +4,6 @@ Always-on local web server on port 8080.
 """
 
 import json
-import json as _json
 import os
 import socket
 import subprocess
@@ -195,8 +194,8 @@ def open_terminal(script_id):
 def _load_run_log(path: str) -> list[dict]:
     try:
         with open(path) as f:
-            return _json.load(f)
-    except (FileNotFoundError, _json.JSONDecodeError):
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
         return []
 
 
