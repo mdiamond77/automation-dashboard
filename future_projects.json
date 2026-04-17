@@ -1,0 +1,101 @@
+[
+  {
+    "id": "monthly-terminations",
+    "title": "Monthly Terminations",
+    "description": "",
+    "priority": "High",
+    "ease": "Medium",
+    "frequency": "Monthly",
+    "status": "Planned"
+  },
+  {
+    "id": "monthly-hold",
+    "title": "Monthly Hold",
+    "description": "",
+    "priority": "High",
+    "ease": "Medium",
+    "frequency": "Monthly",
+    "status": "Planned"
+  },
+  {
+    "id": "hold-reminder-emails",
+    "title": "Hold Reminder Emails",
+    "description": "7-day and 3-day reminders before end of month listing students still on hold or coming off hold, with prompt to review texts/emails/notes/calls.",
+    "priority": "High",
+    "ease": "Medium",
+    "frequency": "Monthly",
+    "status": "Planned"
+  },
+  {
+    "id": "birthdays-level-ups",
+    "title": "Birthdays & Level Ups",
+    "description": "",
+    "priority": "Medium",
+    "ease": "Medium",
+    "frequency": "Monthly",
+    "status": "Planned"
+  },
+  {
+    "id": "binder-audit",
+    "title": "Binder Audit",
+    "description": "Monthly check of how many MCs and last update to LPs per student.",
+    "priority": "High",
+    "ease": "Medium",
+    "frequency": "Monthly",
+    "status": "Planned"
+  },
+  {
+    "id": "current-students-spreadsheet",
+    "title": "Automate Current Students Spreadsheet",
+    "description": "",
+    "priority": "Medium",
+    "ease": "Medium",
+    "frequency": "Monthly",
+    "status": "Planned"
+  },
+  {
+    "id": "kpi-dashboard",
+    "title": "KPI Dashboard",
+    "description": "Automate the New Lead Tracking Report. Unclear where this lives — needs scoping.",
+    "priority": "High",
+    "ease": "Hard",
+    "frequency": "Ad-hoc",
+    "status": "Planned"
+  },
+  {
+    "id": "weekly-lead-tracking",
+    "title": "Weekly Lead Tracking Dashboard",
+    "description": "Show last week's leads, 2 weeks ago, then buckets from 3–5 weeks.",
+    "priority": "Medium",
+    "ease": "Medium",
+    "frequency": "Weekly",
+    "status": "Planned"
+  },
+  {
+    "id": "appointy-calendar-check",
+    "title": "Monthly Appointy Calendar Check",
+    "description": "Run last week of the month.",
+    "priority": "Low",
+    "ease": "Easy",
+    "frequency": "Monthly",
+    "status": "Planned"
+  },
+  {
+    "id": "assessment-email-generator",
+    "title": "Assessment Email Generator",
+    "description": "",
+    "priority": "Medium",
+    "ease": "Medium",
+    "frequency": "Ad-hoc",
+    "status": "Planned"
+  },
+  {
+    "id": "monthly-revenue-changes",
+    "title": "Monthly Revenue Changes",
+    "description": "One report last week of month, one first week of month.",
+    "priority": "Medium",
+    "ease": "Medium",
+    "frequency": "Monthly",
+    "status": "Planned"
+  }
+]
