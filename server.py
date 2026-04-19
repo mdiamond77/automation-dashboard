@@ -9,6 +9,7 @@ import re
 import socket
 import subprocess
 import time
+import urllib.request
 import uuid
 from datetime import datetime as _dt, timezone, timedelta
 
@@ -88,6 +89,7 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "page-goals",
         "run_log_path": "/Users/mattdiamond/mathnasium-page-goals/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-page-goals/main/run_log.json",
     },
     {
         "id": "birthdays-levelups",
@@ -95,6 +97,7 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "birthdays-levelups",
         "run_log_path": "/Users/mattdiamond/mathnasium-birthdays-levelups/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-birthdays-levelups/main/run_log.json",
     },
     {
         "id": "hold-reminders",
@@ -102,6 +105,7 @@ REPORTS = [
         "schedule": "Last Mon/Tue/Thu of month",
         "script_id": "hold-reminders",
         "run_log_path": "/Users/mattdiamond/mathnasium-hold-reminders/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-hold-reminders/main/run_log.json",
     },
 ]
 
@@ -149,7 +153,8 @@ def index():
     report_rows = []
     for report in REPORTS:
         path = report.get("run_log_path")
-        log = _load_run_log(path) if path else []
+        url  = report.get("run_log_url")
+        log = _load_run_log(path, url) if (path or url) else []
         auto_runs   = [r for r in log if r.get("trigger") == "auto"]
         manual_runs = [r for r in log if r.get("trigger") == "manual"]
         script = SCRIPTS.get(report["script_id"], {})
@@ -256,12 +261,21 @@ def open_terminal(script_id):
     return ("", 204)
 
 
-def _load_run_log(path: str) -> list[dict]:
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
+def _load_run_log(path: str, url: str = None) -> list[dict]:
+    """Load run log, preferring GitHub (always current) over local file."""
+    if url:
+        try:
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            pass
+    if path:
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+    return []
 
 
 def _fmt_run(entry: dict | None) -> dict | None:
