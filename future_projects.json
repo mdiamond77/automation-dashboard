@@ -13,7 +13,7 @@
     "title": "Monthly Hold",
     "description": "",
     "priority": "High",
-    "ease": "Medium",
+    "ease": "Easy",
     "frequency": "Monthly",
     "status": "Planned"
   },
@@ -22,18 +22,18 @@
     "title": "Hold Reminder Emails",
     "description": "7-day and 3-day reminders before end of month listing students still on hold or coming off hold, with prompt to review texts/emails/notes/calls.",
     "priority": "High",
-    "ease": "Medium",
+    "ease": "Easy",
     "frequency": "Monthly",
-    "status": "Planned"
+    "status": "Live"
   },
   {
     "id": "birthdays-level-ups",
     "title": "Birthdays & Level Ups",
-    "description": "",
-    "priority": "Medium",
-    "ease": "Medium",
+    "description": "First of the month, send an email to center directors with this month's birthdays and level ups",
+    "priority": "Low",
+    "ease": "Easy",
     "frequency": "Monthly",
-    "status": "Planned"
+    "status": "Live"
   },
   {
     "id": "binder-audit",
@@ -49,14 +49,14 @@
     "title": "Automate Current Students Spreadsheet",
     "description": "",
     "priority": "Medium",
-    "ease": "Medium",
+    "ease": "Hard",
     "frequency": "Monthly",
     "status": "Planned"
   },
   {
     "id": "kpi-dashboard",
     "title": "KPI Dashboard",
-    "description": "Automate the New Lead Tracking Report. Unclear where this lives — needs scoping.",
+    "description": "Automate the New Lead Tracking Report. Unclear where this lives \u2014 needs scoping.",
     "priority": "High",
     "ease": "Hard",
     "frequency": "Ad-hoc",
@@ -65,9 +65,9 @@
   {
     "id": "weekly-lead-tracking",
     "title": "Weekly Lead Tracking Dashboard",
-    "description": "Show last week's leads, 2 weeks ago, then buckets from 3–5 weeks.",
+    "description": "Show last week's leads, 2 weeks ago, then buckets from 3\u20135 weeks.",
     "priority": "Medium",
-    "ease": "Medium",
+    "ease": "Easy",
     "frequency": "Weekly",
     "status": "Planned"
   },
@@ -75,8 +75,8 @@
     "id": "appointy-calendar-check",
     "title": "Monthly Appointy Calendar Check",
     "description": "Run last week of the month.",
-    "priority": "Low",
-    "ease": "Easy",
+    "priority": "Medium",
+    "ease": "Medium",
     "frequency": "Monthly",
     "status": "Planned"
   },
@@ -85,7 +85,7 @@
     "title": "Assessment Email Generator",
     "description": "",
     "priority": "Medium",
-    "ease": "Medium",
+    "ease": "Hard",
     "frequency": "Ad-hoc",
     "status": "Planned"
   },
@@ -93,7 +93,7 @@
     "id": "monthly-revenue-changes",
     "title": "Monthly Revenue Changes",
     "description": "One report last week of month, one first week of month.",
-    "priority": "Medium",
+    "priority": "High",
     "ease": "Medium",
     "frequency": "Monthly",
     "status": "Planned"

@@ -63,6 +63,16 @@ SCRIPTS["birthdays-levelups"] = {
     "hidden": True,
 }
 
+SCRIPTS["hold-reminders"] = {
+    "name": "Hold Reminder Emails",
+    "description": "Emails each center director a list of students coming off hold this month.",
+    "command": [PYTHON, "main.py", "--trigger", "manual"],
+    "cwd": "/Users/mattdiamond/mathnasium-hold-reminders",
+    "icon": "⏸️",
+    "category": "Mathnasium",
+    "hidden": True,
+}
+
 # ── Reports registry (shown on /reports page) ─────────────────────────────────
 REPORTS = [
     {
@@ -85,6 +95,13 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "birthdays-levelups",
         "run_log_path": "/Users/mattdiamond/mathnasium-birthdays-levelups/run_log.json",
+    },
+    {
+        "id": "hold-reminders",
+        "name": "Hold Reminder Emails",
+        "schedule": "Last Mon/Tue/Thu of month",
+        "script_id": "hold-reminders",
+        "run_log_path": "/Users/mattdiamond/mathnasium-hold-reminders/run_log.json",
     },
 ]
 
