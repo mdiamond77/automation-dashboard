@@ -53,6 +53,16 @@ SCRIPTS["page-goals"] = {
     "hidden": True,
 }
 
+SCRIPTS["birthdays-levelups"] = {
+    "name": "Birthdays & Level Ups",
+    "description": "Emails each center director a monthly list of student birthdays and level-ups.",
+    "command": [PYTHON, "main.py"],
+    "cwd": "/Users/mattdiamond/mathnasium-birthdays-levelups",
+    "icon": "🎂",
+    "category": "Mathnasium",
+    "hidden": True,
+}
+
 # ── Reports registry (shown on /reports page) ─────────────────────────────────
 REPORTS = [
     {
@@ -68,6 +78,13 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "page-goals",
         "run_log_path": "/Users/mattdiamond/mathnasium-page-goals/run_log.json",
+    },
+    {
+        "id": "birthdays-levelups",
+        "name": "Birthdays & Level Ups",
+        "schedule": "1st of month",
+        "script_id": "birthdays-levelups",
+        "run_log_path": "/Users/mattdiamond/mathnasium-birthdays-levelups/run_log.json",
     },
 ]
 
