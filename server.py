@@ -108,7 +108,7 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "page-goals",
         "run_log_path": "/Users/mattdiamond/mathnasium-page-goals/run_log.json",
-        "run_log_url": "https://raw.githubusercontent.com/mdmathnasiums/mathnasium-page-goals/main/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-page-goals/main/run_log.json",
     },
     {
         "id": "birthdays-levelups",
@@ -116,7 +116,7 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "birthdays-levelups",
         "run_log_path": "/Users/mattdiamond/mathnasium-birthdays-levelups/run_log.json",
-        "run_log_url": "https://raw.githubusercontent.com/mdmathnasiums/mathnasium-birthdays-levelups/main/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-birthdays-levelups/main/run_log.json",
     },
     {
         "id": "hold-reminders",
@@ -124,7 +124,7 @@ REPORTS = [
         "schedule": "Last Mon/Tue/Thu of month",
         "script_id": "hold-reminders",
         "run_log_path": "/Users/mattdiamond/mathnasium-hold-reminders/run_log.json",
-        "run_log_url": "https://raw.githubusercontent.com/mdmathnasiums/mathnasium-hold-reminders/main/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-hold-reminders/main/run_log.json",
     },
     {
         "id": "binder-audit",
