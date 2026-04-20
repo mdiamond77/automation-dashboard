@@ -17,6 +17,15 @@ from flask import Flask, Response, redirect, render_template, request, jsonify, 
 
 PROJECTS_FILE = os.environ.get("PROJECTS_FILE", os.path.join(os.path.dirname(__file__), "future_projects.json"))
 
+def _get_gh_token() -> str | None:
+    try:
+        result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=5)
+        return result.stdout.strip() or None
+    except Exception:
+        return None
+
+_GH_TOKEN = _get_gh_token()
+
 app = Flask(__name__)
 
 PYTHON = "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3"
@@ -74,6 +83,16 @@ SCRIPTS["hold-reminders"] = {
     "hidden": True,
 }
 
+SCRIPTS["binder-audit"] = {
+    "name": "Binder Audit",
+    "description": "Flags students overdue for a Progress Check or Assessment and emails per-center reports.",
+    "command": [PYTHON, "main.py", "--trigger", "manual"],
+    "cwd": "/Users/mattdiamond/mathnasium-binder-audit",
+    "icon": "📋",
+    "category": "Mathnasium",
+    "hidden": True,
+}
+
 # ── Reports registry (shown on /reports page) ─────────────────────────────────
 REPORTS = [
     {
@@ -89,7 +108,7 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "page-goals",
         "run_log_path": "/Users/mattdiamond/mathnasium-page-goals/run_log.json",
-        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-page-goals/main/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdmathnasiums/mathnasium-page-goals/main/run_log.json",
     },
     {
         "id": "birthdays-levelups",
@@ -97,7 +116,7 @@ REPORTS = [
         "schedule": "1st of month",
         "script_id": "birthdays-levelups",
         "run_log_path": "/Users/mattdiamond/mathnasium-birthdays-levelups/run_log.json",
-        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-birthdays-levelups/main/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdmathnasiums/mathnasium-birthdays-levelups/main/run_log.json",
     },
     {
         "id": "hold-reminders",
@@ -105,7 +124,15 @@ REPORTS = [
         "schedule": "Last Mon/Tue/Thu of month",
         "script_id": "hold-reminders",
         "run_log_path": "/Users/mattdiamond/mathnasium-hold-reminders/run_log.json",
-        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-hold-reminders/main/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdmathnasiums/mathnasium-hold-reminders/main/run_log.json",
+    },
+    {
+        "id": "binder-audit",
+        "name": "Binder Audit",
+        "schedule": "15th of month",
+        "script_id": "binder-audit",
+        "run_log_path": "/Users/mattdiamond/mathnasium-binder-audit/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-binder-audit/main/run_log.json",
     },
 ]
 
@@ -265,7 +292,10 @@ def _load_run_log(path: str, url: str = None) -> list[dict]:
     """Load run log, preferring GitHub (always current) over local file."""
     if url:
         try:
-            with urllib.request.urlopen(url, timeout=5) as resp:
+            req = urllib.request.Request(url)
+            if _GH_TOKEN:
+                req.add_header("Authorization", f"Bearer {_GH_TOKEN}")
+            with urllib.request.urlopen(req, timeout=5) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except Exception:
             pass
@@ -281,6 +311,9 @@ def _load_run_log(path: str, url: str = None) -> list[dict]:
 def _fmt_run(entry: dict | None) -> dict | None:
     if entry is None:
         return None
+    # normalize: older logs use {"status": "success"/"error"}, newer use {"success": bool}
+    if "status" not in entry:
+        entry = {**entry, "status": "success" if entry.get("success") else "error"}
     ts = entry.get("timestamp", "")
     try:
         dt_utc = _dt.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)

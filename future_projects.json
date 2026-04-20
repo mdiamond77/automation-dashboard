@@ -9,15 +9,6 @@
     "status": "Planned"
   },
   {
-    "id": "monthly-hold",
-    "title": "Monthly Hold",
-    "description": "",
-    "priority": "High",
-    "ease": "Easy",
-    "frequency": "Monthly",
-    "status": "Planned"
-  },
-  {
     "id": "hold-reminder-emails",
     "title": "Hold Reminder Emails",
     "description": "7-day and 3-day reminders before end of month listing students still on hold or coming off hold, with prompt to review texts/emails/notes/calls.",
@@ -42,7 +33,7 @@
     "priority": "High",
     "ease": "Medium",
     "frequency": "Monthly",
-    "status": "Planned"
+    "status": "Live"
   },
   {
     "id": "current-students-spreadsheet",
