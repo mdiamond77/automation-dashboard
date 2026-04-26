@@ -93,8 +93,25 @@ SCRIPTS["binder-audit"] = {
     "hidden": True,
 }
 
+SCRIPTS["attendance-alerts"] = {
+    "name": "Attendance Alerts",
+    "description": "Weekly Monday email: students attending < 75% of allowed sessions.",
+    "command": [PYTHON, "main.py", "--trigger", "manual"],
+    "cwd": "/Users/mattdiamond/mathnasium-attendance-alerts",
+    "icon": "📅",
+    "category": "Mathnasium",
+    "hidden": True,
+}
+
 # ── Reports registry (shown on /reports page) ─────────────────────────────────
 REPORTS = [
+    {
+        "id": "radius-cc-lists",
+        "name": "Radius → CC Contact Lists",
+        "schedule": "Monthly",
+        "script_id": "radius-cc-lists",
+        "run_log_path": None,
+    },
     {
         "id": "cc-newsletter",
         "name": "CC Newsletter Update",
@@ -133,6 +150,14 @@ REPORTS = [
         "script_id": "binder-audit",
         "run_log_path": "/Users/mattdiamond/mathnasium-binder-audit/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-binder-audit/main/run_log.json",
+    },
+    {
+        "id": "attendance-alerts",
+        "name": "Attendance Alerts",
+        "schedule": "Weekly (Monday)",
+        "script_id": "attendance-alerts",
+        "run_log_path": "/Users/mattdiamond/mathnasium-attendance-alerts/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-attendance-alerts/main/run_log.json",
     },
 ]
 
@@ -395,6 +420,15 @@ def delete_project(project_id):
     if len(updated) == len(projects):
         return jsonify({"error": "not found"}), 404
     _save_projects(updated)
+    return jsonify({"ok": True})
+
+
+@app.route("/restart", methods=["POST"])
+def restart_server():
+    subprocess.Popen([
+        "bash", "-c",
+        "sleep 1 && launchctl stop com.mathnasium.dashboard && sleep 1 && launchctl start com.mathnasium.dashboard"
+    ])
     return jsonify({"ok": True})
 
 
