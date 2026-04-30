@@ -41,11 +41,10 @@ def _issue_text(row, future_months: list, section: str) -> str:
     if section == "good":
         return ""
     parts = []
-    for i, col in enumerate(future_months):
+    for col in future_months:
         count = int(row[col])
         threshold = int(row["Threshold"])
-        short = count < threshold
-        if section == "needs" and short:
+        if section == "needs" and count < threshold:
             parts.append(f"{_fmt_month(col)}: {count} (need {threshold})")
         elif section == "manual":
             parts.append(f"{_fmt_month(col)}: {count} scheduled")
