@@ -15,6 +15,12 @@ from datetime import datetime as _dt, timezone, timedelta
 
 from flask import Flask, Response, redirect, render_template, request, jsonify, stream_with_context
 
+import tempfile
+import uuid
+
+import scheduling_deliver
+from scheduling_report import run_scheduling_report
+
 PROJECTS_FILE = os.environ.get("PROJECTS_FILE", os.path.join(os.path.dirname(__file__), "future_projects.json"))
 
 def _get_gh_token() -> str | None:
@@ -159,6 +165,26 @@ REPORTS = [
         "run_log_path": "/Users/mattdiamond/mathnasium-attendance-alerts/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-attendance-alerts/main/run_log.json",
     },
+    {
+        "id": "scheduling-report",
+        "name": "Scheduling Report",
+        "schedule": "Monthly",
+        "script_id": None,
+        "run_log_path": None,
+        "tool_link": "/scheduling-report",
+        "icon": "📅",
+        "description": "Identifies students who need appointments booked for the next two months.",
+    },
+    {
+        "id": "current-students-spreadsheet",
+        "name": "Current Students Spreadsheet",
+        "schedule": "4th of month",
+        "script_id": None,
+        "run_log_path": None,
+        "google_script": True,
+        "icon": "📊",
+        "description": "Google script that rolls over last month's data and pulls in payments made this month.",
+    },
 ]
 
 # ── Web apps (launch server if needed, then open in browser) ──────────────────
@@ -189,6 +215,9 @@ WEB_APPS = [
 
 INTERACTIVE = []
 
+# ── Scheduling report session cache ───────────────────────────────────────────
+_sched_cache: dict[str, dict] = {}
+
 
 @app.route("/reports")
 def reports_redirect():
@@ -212,8 +241,8 @@ def index():
         script = SCRIPTS.get(report["script_id"], {})
         report_rows.append({
             **report,
-            "icon":        script.get("icon", "📄"),
-            "description": script.get("description", ""),
+            "icon":        script.get("icon") or report.get("icon", "📄"),
+            "description": script.get("description") or report.get("description", ""),
             "confirm":     script.get("confirm"),
             "last_auto":   _fmt_run(auto_runs[-1]   if auto_runs   else None),
             "last_manual": _fmt_run(manual_runs[-1] if manual_runs else None),
@@ -429,6 +458,118 @@ def restart_server():
         "bash", "-c",
         "sleep 1 && launchctl stop com.mathnasium.dashboard && sleep 1 && launchctl start com.mathnasium.dashboard"
     ])
+    return jsonify({"ok": True})
+
+
+# ── Scheduling Report ─────────────────────────────────────────────────────────
+
+def _serialize_result(result: dict) -> dict:
+    from datetime import datetime as _dt2
+
+    def fmt_month(s):
+        return _dt2.strptime(s, "%Y-%m").strftime("%b %Y")
+
+    def cell_bg(count, threshold):
+        if count == 0:
+            return "red"
+        if count < threshold:
+            return "yellow"
+        return ""
+
+    def issue_text(row, future_months, threshold_type):
+        if threshold_type == "good":
+            return ""
+        parts = []
+        for col in future_months:
+            count = int(row[col])
+            threshold = int(row["Threshold"])
+            if count < threshold:
+                parts.append(f"{fmt_month(col)}: {count} (need {threshold})")
+        return " | ".join(parts)
+
+    def df_records(df, group_key):
+        records = []
+        for _, row in df.iterrows():
+            threshold = int(row["Threshold"])
+            future_months = result["future_months"]
+            records.append({
+                "name": str(row["Student Name"]),
+                "center": str(row["Center"]),
+                "sessions": [int(row[m]) for m in result["recent_months"]],
+                "threshold": threshold,
+                "threshold_type": str(row["ThresholdType"]),
+                "future": [int(row[m]) for m in future_months],
+                "future_bg": [cell_bg(int(row[m]), threshold) for m in future_months],
+                "short_1": bool(row["short_1"]),
+                "short_2": bool(row["short_2"]),
+                "issue": issue_text(row, future_months, group_key),
+            })
+        return records
+
+    return {
+        "needs": df_records(result["needs"], "needs"),
+        "manual": df_records(result["manual"], "manual"),
+        "good": df_records(result["good"], "good"),
+        "recent_months": [fmt_month(m) for m in result["recent_months"]],
+        "future_months": [fmt_month(m) for m in result["future_months"]],
+        "warning_center": result.get("warning_center"),
+    }
+
+
+@app.route("/scheduling-report")
+def scheduling_report_page():
+    return render_template("scheduling_report.html")
+
+
+@app.route("/api/scheduling-report/run", methods=["POST"])
+def scheduling_report_run():
+    wp_file = request.files.get("workout_plan")
+    ap_file = request.files.get("appointy")
+    if not wp_file or not ap_file:
+        return jsonify({"error": "Both files required"}), 400
+
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as wp_tmp:
+        wp_file.save(wp_tmp.name)
+        wp_path = wp_tmp.name
+
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as ap_tmp:
+        ap_file.save(ap_tmp.name)
+        ap_path = ap_tmp.name
+
+    try:
+        result = run_scheduling_report(wp_path, ap_path)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        os.unlink(wp_path)
+        os.unlink(ap_path)
+
+    token = str(uuid.uuid4())
+    _sched_cache[token] = result
+
+    payload = _serialize_result(result)
+    payload["token"] = token
+
+    resp = jsonify(payload)
+    resp.set_cookie("sched_token", token, samesite="Lax")
+    return resp
+
+
+@app.route("/api/scheduling-report/email/<center>", methods=["POST"])
+def scheduling_report_email(center):
+    if center not in ("Englewood", "Teaneck"):
+        return jsonify({"error": "Invalid center"}), 400
+
+    token = request.cookies.get("sched_token")
+    if not token or token not in _sched_cache:
+        return jsonify({"error": "No results found — please run the report first"}), 400
+
+    result = _sched_cache[token]
+    try:
+        scheduling_deliver.send_report(center, result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
     return jsonify({"ok": True})
 
 
