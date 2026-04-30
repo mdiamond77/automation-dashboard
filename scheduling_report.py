@@ -3,11 +3,13 @@ import pandas as pd
 
 def run_scheduling_report(workout_plan_path, appointy_path) -> dict:
     # ── 1. Load Workout Plan ──────────────────────────────────────────────────
-    wp = pd.read_excel(workout_plan_path)
-    wp["Date"] = pd.to_datetime(wp["Date"], format="%m/%d/%Y")
-    wp["Month"] = wp["Date"].dt.to_period("M")
-    wp["Center"] = wp["Center"].apply(
-        lambda c: "Englewood" if pd.notna(c) and str(c).startswith("Englewood") else "Teaneck"
+    wp = pd.read_excel(workout_plan_path).copy()
+    wp = wp.assign(Date=pd.to_datetime(wp["Date"], format="%m/%d/%Y"))
+    wp = wp.assign(Month=wp["Date"].dt.to_period("M"))
+    wp = wp.assign(
+        Center=wp["Center"].apply(
+            lambda c: "Englewood" if pd.notna(c) and str(c).startswith("Englewood") else "Teaneck"
+        )
     )
 
     # ── 2. Dynamic month detection ────────────────────────────────────────────
@@ -43,16 +45,14 @@ def run_scheduling_report(workout_plan_path, appointy_path) -> dict:
         else:  # p == 5
             return (8 if s >= 6 else 4), "inferred"
 
-    active[["Threshold", "ThresholdType"]] = active.apply(
-        lambda r: pd.Series(_classify(r)), axis=1
-    )
+    _classified = active.apply(lambda r: pd.Series(_classify(r)), axis=1)
+    _classified.columns = ["Threshold", "ThresholdType"]
+    active = active.assign(Threshold=_classified["Threshold"], ThresholdType=_classified["ThresholdType"])
 
     # ── 6. Load Appointy — confirmed future appointments only ─────────────────
-    ap = pd.read_csv(appointy_path)
-    ap["Appointment Date"] = pd.to_datetime(
-        ap["Appointment Date"], format="%b %d, %Y %I:%M %p"
-    )
-    ap["Month"] = ap["Appointment Date"].dt.to_period("M")
+    ap = pd.read_csv(appointy_path).copy()
+    ap = ap.assign(**{"Appointment Date": pd.to_datetime(ap["Appointment Date"], format="%b %d, %Y %I:%M %p")})
+    ap = ap.assign(Month=ap["Appointment Date"].dt.to_period("M"))
     ap = ap.rename(columns={"Center Name": "Center"})
 
     confirmed = ap[ap["Status"] == "APPOINTMENT_CONFIRMED"]
@@ -69,14 +69,13 @@ def run_scheduling_report(workout_plan_path, appointy_path) -> dict:
         if m not in fc.columns:
             fc[m] = 0
     if not future_months:
-        future_col_1 = future_col_2 = None
-        fc = pd.DataFrame(columns=["Student Name", "Center"])
+        raise ValueError("Appointy file contains no confirmed appointments. Check your export.")
     elif len(future_months) == 1:
         fc = fc[future_months].reset_index()
         future_col_1 = str(future_months[0])
         future_col_2 = future_col_1
         fc.columns = ["Student Name", "Center", future_col_1]
-        fc[future_col_2] = fc[future_col_1]
+        fc = fc.assign(**{future_col_2: fc[future_col_1]})
     else:
         fc = fc[future_months].reset_index()
         future_col_1 = str(future_months[0])
@@ -85,10 +84,16 @@ def run_scheduling_report(workout_plan_path, appointy_path) -> dict:
 
     # ── 8. Merge and flag gaps ────────────────────────────────────────────────
     merged = active.merge(fc, on=["Student Name", "Center"], how="left")
-    merged[future_col_1] = merged[future_col_1].fillna(0).astype(int)
-    merged[future_col_2] = merged[future_col_2].fillna(0).astype(int)
-    merged["short_1"] = merged[future_col_1] < merged["Threshold"]
-    merged["short_2"] = merged[future_col_2] < merged["Threshold"]
+    merged = merged.assign(
+        **{
+            future_col_1: merged[future_col_1].fillna(0).astype(int),
+            future_col_2: merged[future_col_2].fillna(0).astype(int),
+        }
+    )
+    merged = merged.assign(
+        short_1=merged[future_col_1] < merged["Threshold"],
+        short_2=merged[future_col_2] < merged["Threshold"],
+    )
 
     # ── 9. Split into three groups ────────────────────────────────────────────
     needs = merged[
