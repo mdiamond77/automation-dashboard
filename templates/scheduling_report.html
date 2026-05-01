@@ -130,7 +130,9 @@
 
     function renderWarning(data) {
       if (data.warning_center) {
-        warningBanner.textContent = '⚠ Only one center detected in the Appointy file ("' + data.warning_center + '" — the other center\'s students will show zero future appointments). Re-export with both centers included.';
+        const allCenters = ['Englewood', 'Teaneck'];
+        const missingCenter = allCenters.find(c => c !== data.warning_center) || 'the other center';
+        warningBanner.textContent = '⚠ Only one center detected in the Appointy file ("' + data.warning_center + '" — "' + missingCenter + '" students will show zero future appointments). Re-export with both centers included.';
         warningBanner.classList.remove('d-none', 'alert-danger');
         warningBanner.classList.add('alert-warning');
       } else {
