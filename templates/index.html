@@ -46,6 +46,8 @@
     .btn-confirm { background: #16a34a; color: white; }
     .btn-cancel  { background: #e5e7eb; color: #374151; }
     .btn-add     { background: #1e3a5f; color: white; margin-top: 12px; padding: 8px 18px; font-size: 0.8rem; }
+    .btn-restart { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+    .btn-restart:hover { background: rgba(255,255,255,0.25); }
 
     .running-indicator { display: none; align-items: center; font-size: 0.8rem; color: #60a5fa; margin-left: 8px; }
     .running-indicator.active { display: inline-flex; }
@@ -93,6 +95,7 @@
     <p>Live automations and project backlog</p>
   </div>
   <a class="nav-link" href="/personal">Personal Projects →</a>
+  <button class="btn btn-restart" id="restart-btn" onclick="restartServer()" style="margin-left:16px;">↺ Restart Server</button>
 </header>
 
 <main>
@@ -126,7 +129,11 @@
           <td>{{ r.schedule }}</td>
 
           <td>
-            {% if r.last_auto %}
+            {% if r.tool_link %}
+              <span class="status-none">—</span>
+            {% elif r.google_script %}
+              <span class="status-none">—</span>
+            {% elif r.last_auto %}
               <span class="{{ 'status-ok' if r.last_auto.status == 'success' else 'status-err' }}">
                 {{ '✓' if r.last_auto.status == 'success' else '✗' }}
               </span>
@@ -137,7 +144,11 @@
           </td>
 
           <td>
-            {% if r.last_manual %}
+            {% if r.tool_link %}
+              <span class="status-none">—</span>
+            {% elif r.google_script %}
+              <span class="status-none">—</span>
+            {% elif r.last_manual %}
               <span class="{{ 'status-ok' if r.last_manual.status == 'success' else 'status-err' }}">
                 {{ '✓' if r.last_manual.status == 'success' else '✗' }}
               </span>
@@ -148,30 +159,41 @@
           </td>
 
           <td>
-            {% set last = r.last_auto or r.last_manual %}
-            {% if not last %}
-              <span class="status-none">—</span>
+            {% if r.google_script %}
+              <span style="color:#6b7280;font-size:0.8rem;">🔧 Google Scripts</span>
             {% else %}
-              {% if last.drive_link %}
-                <a class="delivery-link" href="{{ last.drive_link }}" target="_blank">📁 Drive</a>
-              {% endif %}
-              {% if last.status == 'success' %}
-                <span style="color:#6b7280;font-size:0.8rem;">📧 Emailed</span>
+              {% set last = r.last_auto or r.last_manual %}
+              {% if not last %}
+                <span class="status-none">—</span>
+              {% else %}
+                {% if last.drive_link %}
+                  <a class="delivery-link" href="{{ last.drive_link }}" target="_blank">📁 Drive</a>
+                {% endif %}
+                {% if last.status == 'success' %}
+                  <span style="color:#6b7280;font-size:0.8rem;">📧 Emailed</span>
+                {% endif %}
               {% endif %}
             {% endif %}
           </td>
 
           <td id="run-cell-{{ r.script_id }}" style="white-space:nowrap;">
-            {% if r.confirm %}
+            {% if r.tool_link %}
+              <a class="btn btn-primary" href="{{ r.tool_link }}">🔗 Open Tool</a>
+            {% elif r.google_script %}
+              <span class="status-none">—</span>
+            {% elif r.confirm %}
             <button class="btn btn-primary" id="run-btn-{{ r.script_id }}"
                     onclick="askConfirm('{{ r.script_id }}', '{{ r.name }}', '{{ r.confirm }}')">▶ Run Now</button>
-            {% else %}
-            <button class="btn btn-primary" id="run-btn-{{ r.script_id }}"
-                    onclick="runScript('{{ r.script_id }}', '{{ r.name }}')">▶ Run Now</button>
-            {% endif %}
             <span class="running-indicator" id="running-{{ r.script_id }}">
               <span class="spinner"></span> Running…
             </span>
+            {% else %}
+            <button class="btn btn-primary" id="run-btn-{{ r.script_id }}"
+                    onclick="runScript('{{ r.script_id }}', '{{ r.name }}')">▶ Run Now</button>
+            <span class="running-indicator" id="running-{{ r.script_id }}">
+              <span class="spinner"></span> Running…
+            </span>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -438,6 +460,16 @@
       if (indicator) indicator.classList.remove("active");
       currentScriptId = null;
     }
+  }
+
+  // ── Restart server ───────────────────────────────────────────
+  async function restartServer() {
+    if (!confirm("Restart the dashboard server? The page will reload in a few seconds.")) return;
+    const btn = document.getElementById("restart-btn");
+    btn.textContent = "Restarting…";
+    btn.disabled = true;
+    await fetch("/restart", { method: "POST" });
+    setTimeout(() => location.reload(), 3000);
   }
 
   // ── Init ─────────────────────────────────────────────────────
