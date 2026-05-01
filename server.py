@@ -16,7 +16,6 @@ from datetime import datetime as _dt, timezone, timedelta
 from flask import Flask, Response, redirect, render_template, request, jsonify, stream_with_context
 
 import tempfile
-import uuid
 
 import scheduling_deliver
 from scheduling_report import run_scheduling_report
@@ -483,7 +482,9 @@ def _serialize_result(result: dict) -> dict:
         for col in future_months:
             count = int(row[col])
             threshold = int(row["Threshold"])
-            if count < threshold:
+            if threshold_type == "manual":
+                parts.append(f"{fmt_month(col)}: {count} scheduled")
+            elif count < threshold:
                 parts.append(f"{fmt_month(col)}: {count} (need {threshold})")
         return " | ".join(parts)
 
@@ -541,8 +542,14 @@ def scheduling_report_run():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
-        os.unlink(wp_path)
-        os.unlink(ap_path)
+        try:
+            os.unlink(wp_path)
+        except OSError:
+            pass
+        try:
+            os.unlink(ap_path)
+        except OSError:
+            pass
 
     token = str(uuid.uuid4())
     _sched_cache[token] = result
