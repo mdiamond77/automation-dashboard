@@ -1,1 +1,273 @@
-<h1>Scheduling Report</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scheduling Report — Mathnasium Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body { background: #f0f2f5; }
+    header { background: #1e3a5f; color: white; padding: 16px 32px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    header h1 { font-size: 1.4rem; font-weight: 700; margin: 0; }
+    .nav-back { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; }
+    .nav-back:hover { color: white; }
+  </style>
+</head>
+<body>
+  <header>
+    <span style="font-size:1.8rem;">📅</span>
+    <h1>Mathnasium Automations</h1>
+    <a href="/" class="nav-back ms-auto">← Back to Dashboard</a>
+  </header>
+
+  <div class="container mt-4">
+    <h2>📅 Scheduling Report</h2>
+    <p class="text-muted">Upload files below to identify students who need appointments booked.</p>
+
+    <!-- Upload form card -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-bold">Digital Workout Plan (.xlsx) — export last 90 days from Radius</label>
+          <input type="file" id="workoutFile" class="form-control" accept=".xlsx">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Appointy Appointment Report (.csv) — export the next 2 months from Appointy (confirmed only)</label>
+          <input type="file" id="appointyFile" class="form-control" accept=".csv">
+        </div>
+        <button id="runBtn" class="btn btn-primary" disabled>
+          <span id="runSpinner" class="spinner-border spinner-border-sm me-2 d-none"></span>
+          <span id="runBtnLabel">Run Report</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Warning banner -->
+    <div id="warningBanner" class="alert alert-warning d-none" role="alert"></div>
+
+    <!-- Results section -->
+    <div id="resultsSection" class="d-none">
+      <ul class="nav nav-tabs" id="centerTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="englewood-tab" data-bs-toggle="tab" data-bs-target="#englewood-pane" type="button" role="tab">Englewood</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="teaneck-tab" data-bs-toggle="tab" data-bs-target="#teaneck-pane" type="button" role="tab">Teaneck</button>
+        </li>
+      </ul>
+      <div class="tab-content border border-top-0 rounded-bottom bg-white p-3 mb-3">
+        <div class="tab-pane fade show active" id="englewood-pane" role="tabpanel"></div>
+        <div class="tab-pane fade" id="teaneck-pane" role="tabpanel"></div>
+      </div>
+    </div>
+
+    <!-- Email buttons -->
+    <div id="emailSection" class="d-none mt-3">
+      <button id="emailEnglewoodBtn" class="btn btn-outline-primary me-2">
+        <span id="emailEnglewoodSpinner" class="spinner-border spinner-border-sm me-1 d-none"></span>
+        📧 Email Englewood Report
+      </button>
+      <button id="emailTeaneckBtn" class="btn btn-outline-primary">
+        <span id="emailTeaneckSpinner" class="spinner-border spinner-border-sm me-1 d-none"></span>
+        📧 Email Teaneck Report
+      </button>
+      <span id="emailStatus" class="ms-2 text-muted"></span>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const workoutFile = document.getElementById('workoutFile');
+    const appointyFile = document.getElementById('appointyFile');
+    const runBtn = document.getElementById('runBtn');
+    const runSpinner = document.getElementById('runSpinner');
+    const runBtnLabel = document.getElementById('runBtnLabel');
+    const warningBanner = document.getElementById('warningBanner');
+    const resultsSection = document.getElementById('resultsSection');
+    const emailSection = document.getElementById('emailSection');
+    const emailEnglewoodBtn = document.getElementById('emailEnglewoodBtn');
+    const emailTeaneckBtn = document.getElementById('emailTeaneckBtn');
+    const emailEnglewoodSpinner = document.getElementById('emailEnglewoodSpinner');
+    const emailTeaneckSpinner = document.getElementById('emailTeaneckSpinner');
+    const emailStatus = document.getElementById('emailStatus');
+
+    workoutFile.addEventListener('change', updateRunBtn);
+    appointyFile.addEventListener('change', updateRunBtn);
+
+    function updateRunBtn() {
+      runBtn.disabled = !(workoutFile.files.length && appointyFile.files.length);
+    }
+
+    runBtn.addEventListener('click', async () => {
+      const fd = new FormData();
+      fd.append('workout_plan', workoutFile.files[0]);
+      fd.append('appointy', appointyFile.files[0]);
+
+      runBtn.disabled = true;
+      runSpinner.classList.remove('d-none');
+      runBtnLabel.textContent = 'Analyzing…';
+
+      try {
+        const resp = await fetch('/api/scheduling-report/run', { method: 'POST', body: fd });
+        const data = await resp.json();
+        if (!resp.ok) { showError(data.error); return; }
+        renderResults(data);
+      } catch(e) {
+        showError(e.message);
+      } finally {
+        runBtn.disabled = false;
+        runSpinner.classList.add('d-none');
+        runBtnLabel.textContent = 'Run Report';
+        updateRunBtn();
+      }
+    });
+
+    function showError(msg) {
+      warningBanner.textContent = '❌ Error: ' + msg;
+      warningBanner.classList.remove('d-none', 'alert-warning');
+      warningBanner.classList.add('alert-danger');
+    }
+
+    function renderWarning(data) {
+      if (data.warning_center) {
+        warningBanner.textContent = '⚠ Only one center detected in the Appointy file ("' + data.warning_center + '" — the other center\'s students will show zero future appointments). Re-export with both centers included.';
+        warningBanner.classList.remove('d-none', 'alert-danger');
+        warningBanner.classList.add('alert-warning');
+      } else {
+        warningBanner.classList.add('d-none');
+      }
+    }
+
+    function renderResults(data) {
+      renderWarning(data);
+
+      const groups = [
+        { key: 'needs',  label: 'Needs Appointments',           color: '#2E75B6' },
+        { key: 'manual', label: 'Manual Review Recommended',    color: '#C55A11' },
+        { key: 'good',   label: 'Looks Good',                   color: '#70AD47' }
+      ];
+
+      ['Englewood', 'Teaneck'].forEach(center => {
+        const paneId = center.toLowerCase() + '-pane';
+        const pane = document.getElementById(paneId);
+        pane.innerHTML = '';
+
+        let hasAny = false;
+
+        groups.forEach(group => {
+          const rows = (data[group.key] || []).filter(r => r.center === center);
+          if (!rows.length) return;
+          hasAny = true;
+
+          const header = document.createElement('h5');
+          header.style.color = group.color;
+          header.style.marginTop = '1.5rem';
+          header.textContent = group.label;
+          pane.appendChild(header);
+
+          const table = document.createElement('table');
+          table.className = 'table table-bordered table-sm';
+
+          // Build header row
+          const thead = document.createElement('thead');
+          const headerRow = document.createElement('tr');
+          const cols = [
+            'Student Name',
+            ...data.recent_months.map(m => m + ' Sessions'),
+            'Required/Month',
+            ...data.future_months.map(m => m + ' Scheduled'),
+            'Issue'
+          ];
+          cols.forEach(col => {
+            const th = document.createElement('th');
+            th.textContent = col;
+            headerRow.appendChild(th);
+          });
+          thead.appendChild(headerRow);
+          table.appendChild(thead);
+
+          // Build body rows
+          const tbody = document.createElement('tbody');
+          rows.forEach(row => {
+            const tr = document.createElement('tr');
+
+            // Name
+            const nameTd = document.createElement('td');
+            nameTd.textContent = row.name;
+            tr.appendChild(nameTd);
+
+            // Recent month sessions
+            (row.sessions || []).forEach(s => {
+              const td = document.createElement('td');
+              td.textContent = s;
+              tr.appendChild(td);
+            });
+
+            // Required/month (threshold)
+            const threshTd = document.createElement('td');
+            threshTd.textContent = row.threshold;
+            tr.appendChild(threshTd);
+
+            // Future months
+            (row.future || []).forEach((count, i) => {
+              const td = document.createElement('td');
+              td.textContent = count;
+              const bg = (row.future_bg || [])[i];
+              if (bg === 'red') td.style.background = '#fde8e8';
+              else if (bg === 'yellow') td.style.background = '#fef9e7';
+              tr.appendChild(td);
+            });
+
+            // Issue
+            const issueTd = document.createElement('td');
+            issueTd.textContent = row.issue || '';
+            tr.appendChild(issueTd);
+
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          pane.appendChild(table);
+        });
+
+        if (!hasAny) {
+          const p = document.createElement('p');
+          p.textContent = 'No students flagged.';
+          pane.appendChild(p);
+        }
+      });
+
+      resultsSection.classList.remove('d-none');
+      emailSection.classList.remove('d-none');
+    }
+
+    function sendEmail(center, btn, spinner) {
+      btn.disabled = true;
+      spinner.classList.remove('d-none');
+      emailStatus.textContent = '';
+
+      fetch('/api/scheduling-report/email/' + center, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.ok) {
+            emailStatus.textContent = '✅ ' + center + ' report sent!';
+            emailStatus.className = 'ms-2 text-success';
+          } else {
+            emailStatus.textContent = '❌ ' + data.error;
+            emailStatus.className = 'ms-2 text-danger';
+          }
+        })
+        .catch(e => {
+          emailStatus.textContent = '❌ ' + e.message;
+          emailStatus.className = 'ms-2 text-danger';
+        })
+        .finally(() => {
+          btn.disabled = false;
+          spinner.classList.add('d-none');
+        });
+    }
+
+    emailEnglewoodBtn.addEventListener('click', () => sendEmail('Englewood', emailEnglewoodBtn, emailEnglewoodSpinner));
+    emailTeaneckBtn.addEventListener('click', () => sendEmail('Teaneck', emailTeaneckBtn, emailTeaneckSpinner));
+  </script>
+</body>
+</html>
