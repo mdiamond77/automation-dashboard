@@ -248,13 +248,13 @@
       emailStatus.textContent = '';
 
       fetch('/api/scheduling-report/email/' + center, { method: 'POST' })
-        .then(r => r.json())
-        .then(data => {
-          if (data.ok) {
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+          if (ok && data.ok) {
             emailStatus.textContent = '✅ ' + center + ' report sent!';
             emailStatus.className = 'ms-2 text-success';
           } else {
-            emailStatus.textContent = '❌ ' + data.error;
+            emailStatus.textContent = '❌ ' + (data.error || 'Unexpected error');
             emailStatus.className = 'ms-2 text-danger';
           }
         })
