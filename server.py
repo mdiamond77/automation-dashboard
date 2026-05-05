@@ -7,11 +7,14 @@ import json
 import os
 import re
 import socket
+import ssl
 import subprocess
 import time
 import urllib.request
 import uuid
 from datetime import datetime as _dt, timezone, timedelta
+
+import certifi
 
 from flask import Flask, Response, redirect, render_template, request, jsonify, stream_with_context
 
@@ -23,11 +26,15 @@ from scheduling_report import run_scheduling_report
 PROJECTS_FILE = os.environ.get("PROJECTS_FILE", os.path.join(os.path.dirname(__file__), "future_projects.json"))
 
 def _get_gh_token() -> str | None:
-    try:
-        result = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=5)
-        return result.stdout.strip() or None
-    except Exception:
-        return None
+    for gh in ["gh", "/opt/homebrew/bin/gh", "/usr/local/bin/gh"]:
+        try:
+            result = subprocess.run([gh, "auth", "token"], capture_output=True, text=True, timeout=5)
+            token = result.stdout.strip()
+            if token:
+                return token
+        except Exception:
+            continue
+    return None
 
 _GH_TOKEN = _get_gh_token()
 
@@ -98,6 +105,16 @@ SCRIPTS["binder-audit"] = {
     "hidden": True,
 }
 
+SCRIPTS["monthly-revenue-changes"] = {
+    "name": "Monthly Revenue Changes",
+    "description": "Detects account-level revenue changes from Radius Payment Reconciliation and emails AI-narrated summaries to center directors.",
+    "command": [PYTHON, "main.py", "--run-type", "month_start"],
+    "cwd": "/Users/mattdiamond/radius-monthly-revenue-changes",
+    "icon": "💰",
+    "category": "Mathnasium",
+    "hidden": True,
+}
+
 SCRIPTS["attendance-alerts"] = {
     "name": "Attendance Alerts",
     "description": "Weekly Monday email: students attending < 75% of allowed sessions.",
@@ -108,27 +125,16 @@ SCRIPTS["attendance-alerts"] = {
     "hidden": True,
 }
 
-# ── Reports registry (shown on /reports page) ─────────────────────────────────
+# ── Reports registry ──────────────────────────────────────────────────────────
+# group: "emails" → Automated Emails section; "tools" → Mathnasium Tools section
 REPORTS = [
-    {
-        "id": "radius-cc-lists",
-        "name": "Radius → CC Contact Lists",
-        "schedule": "Monthly",
-        "script_id": "radius-cc-lists",
-        "run_log_path": None,
-    },
-    {
-        "id": "cc-newsletter",
-        "name": "CC Newsletter Update",
-        "schedule": "Monthly",
-        "script_id": "cc-newsletter",
-        "run_log_path": None,
-    },
+    # ── Automated Emails ──────────────────────────────────────────────────────
     {
         "id": "student-page-goals",
         "name": "Student Page Goals",
         "schedule": "1st of month",
         "script_id": "page-goals",
+        "group": "emails",
         "run_log_path": "/Users/mattdiamond/mathnasium-page-goals/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-page-goals/main/run_log.json",
     },
@@ -137,6 +143,7 @@ REPORTS = [
         "name": "Birthdays & Level Ups",
         "schedule": "1st of month",
         "script_id": "birthdays-levelups",
+        "group": "emails",
         "run_log_path": "/Users/mattdiamond/mathnasium-birthdays-levelups/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-birthdays-levelups/main/run_log.json",
     },
@@ -145,6 +152,7 @@ REPORTS = [
         "name": "Hold Reminder Emails",
         "schedule": "Last Mon/Tue/Thu of month",
         "script_id": "hold-reminders",
+        "group": "emails",
         "run_log_path": "/Users/mattdiamond/mathnasium-hold-reminders/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-hold-reminders/main/run_log.json",
     },
@@ -153,6 +161,7 @@ REPORTS = [
         "name": "Binder Audit",
         "schedule": "15th of month",
         "script_id": "binder-audit",
+        "group": "emails",
         "run_log_path": "/Users/mattdiamond/mathnasium-binder-audit/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-binder-audit/main/run_log.json",
     },
@@ -161,14 +170,42 @@ REPORTS = [
         "name": "Attendance Alerts",
         "schedule": "Weekly (Monday)",
         "script_id": "attendance-alerts",
+        "group": "emails",
         "run_log_path": "/Users/mattdiamond/mathnasium-attendance-alerts/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-attendance-alerts/main/run_log.json",
+    },
+    {
+        "id": "monthly-revenue-changes",
+        "name": "Monthly Revenue Changes",
+        "schedule": "26th & 3rd of month",
+        "script_id": "monthly-revenue-changes",
+        "group": "emails",
+        "run_log_path": "/Users/mattdiamond/radius-monthly-revenue-changes/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/radius-monthly-revenue-changes/main/run_log.json",
+    },
+    # ── Mathnasium Tools ──────────────────────────────────────────────────────
+    {
+        "id": "radius-cc-lists",
+        "name": "Radius → CC Contact Lists",
+        "schedule": "Monthly",
+        "script_id": "radius-cc-lists",
+        "group": "tools",
+        "run_log_path": None,
+    },
+    {
+        "id": "cc-newsletter",
+        "name": "CC Newsletter Update",
+        "schedule": "Monthly",
+        "script_id": "cc-newsletter",
+        "group": "tools",
+        "run_log_path": None,
     },
     {
         "id": "scheduling-report",
         "name": "Scheduling Report",
         "schedule": "Monthly",
         "script_id": None,
+        "group": "tools",
         "run_log_path": None,
         "tool_link": "/scheduling-report",
         "icon": "📅",
@@ -179,6 +216,7 @@ REPORTS = [
         "name": "Current Students Spreadsheet",
         "schedule": "4th of month",
         "script_id": None,
+        "group": "tools",
         "run_log_path": None,
         "google_script": True,
         "icon": "📊",
@@ -230,23 +268,28 @@ def personal_page():
 
 @app.route("/")
 def index():
-    report_rows = []
+    email_rows = []
+    tool_rows = []
     for report in REPORTS:
         path = report.get("run_log_path")
         url  = report.get("run_log_url")
         log = _load_run_log(path, url) if (path or url) else []
         auto_runs   = [r for r in log if r.get("trigger") == "auto"]
         manual_runs = [r for r in log if r.get("trigger") == "manual"]
-        script = SCRIPTS.get(report["script_id"], {})
-        report_rows.append({
+        script = SCRIPTS.get(report.get("script_id"), {})
+        row = {
             **report,
             "icon":        script.get("icon") or report.get("icon", "📄"),
             "description": script.get("description") or report.get("description", ""),
             "confirm":     script.get("confirm"),
             "last_auto":   _fmt_run(auto_runs[-1]   if auto_runs   else None),
             "last_manual": _fmt_run(manual_runs[-1] if manual_runs else None),
-        })
-    return render_template("index.html", reports=report_rows)
+        }
+        if report.get("group") == "tools":
+            tool_rows.append(row)
+        else:
+            email_rows.append(row)
+    return render_template("index.html", email_reports=email_rows, tool_reports=tool_rows)
 
 
 @app.route("/run/<script_id>")
@@ -348,7 +391,8 @@ def _load_run_log(path: str, url: str = None) -> list[dict]:
             req = urllib.request.Request(url)
             if _GH_TOKEN:
                 req.add_header("Authorization", f"Bearer {_GH_TOKEN}")
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+            with urllib.request.urlopen(req, timeout=5, context=ssl_ctx) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except Exception:
             pass
