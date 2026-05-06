@@ -18,6 +18,17 @@ import certifi
 
 from flask import Flask, Response, redirect, render_template, request, jsonify, stream_with_context
 
+# Load credentials from ~/.mathnasium_env so subprocesses inherit them.
+# The LaunchAgent doesn't source shell profiles, so env vars aren't available otherwise.
+_ENV_FILE = os.path.expanduser("~/.mathnasium_env")
+if os.path.exists(_ENV_FILE):
+    with open(_ENV_FILE) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 import tempfile
 
 import scheduling_deliver
