@@ -125,6 +125,16 @@ SCRIPTS["attendance-alerts"] = {
     "hidden": True,
 }
 
+SCRIPTS["activity-report"] = {
+    "name": "Activity Report",
+    "description": "Emails a summary of completed center activities from the last 3 days, grouped by activity type.",
+    "command": [PYTHON, "main.py", "--trigger", "manual", "--preview"],
+    "cwd": "/Users/mattdiamond/mathnasium-activity-report",
+    "icon": "📋",
+    "category": "Mathnasium",
+    "hidden": True,
+}
+
 # ── Reports registry ──────────────────────────────────────────────────────────
 # group: "emails" → Automated Emails section; "tools" → Mathnasium Tools section
 REPORTS = [
@@ -173,6 +183,15 @@ REPORTS = [
         "group": "emails",
         "run_log_path": "/Users/mattdiamond/mathnasium-attendance-alerts/run_log.json",
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-attendance-alerts/main/run_log.json",
+    },
+    {
+        "id": "activity-report",
+        "name": "Activity Report",
+        "schedule": "Nightly (preview)",
+        "script_id": "activity-report",
+        "group": "emails",
+        "run_log_path": "/Users/mattdiamond/mathnasium-activity-report/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdmathnasiums/mathnasium-activity-report/main/run_log.json",
     },
     {
         "id": "monthly-revenue-changes",
