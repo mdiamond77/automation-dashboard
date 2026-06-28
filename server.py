@@ -139,7 +139,7 @@ SCRIPTS["attendance-alerts"] = {
 SCRIPTS["activity-report"] = {
     "name": "Activity Report",
     "description": "Emails a summary of completed center activities from the last 3 days, grouped by activity type.",
-    "command": [PYTHON, "main.py", "--trigger", "manual", "--preview"],
+    "command": [PYTHON, "main.py", "--trigger", "manual"],
     "cwd": "/Users/mattdiamond/mathnasium-activity-report",
     "icon": "📋",
     "category": "Mathnasium",
@@ -240,6 +240,17 @@ REPORTS = [
         "tool_link": "/scheduling-report",
         "icon": "📅",
         "description": "Identifies students who need appointments booked for the next two months.",
+    },
+    {
+        "id": "new-enrollments",
+        "name": "New Enrollments",
+        "schedule": "On demand",
+        "script_id": None,
+        "group": "tools",
+        "run_log_path": None,
+        "tool_link": "/new-enrollments",
+        "icon": "📈",
+        "description": "New student enrollments by month with program type and amount charged.",
     },
     {
         "id": "current-students-spreadsheet",
@@ -589,6 +600,68 @@ def _serialize_result(result: dict) -> dict:
         "future_months": [fmt_month(m) for m in result["future_months"]],
         "warning_center": result.get("warning_center"),
     }
+
+
+@app.route("/new-enrollments")
+def new_enrollments_page():
+    return render_template("new_enrollments.html")
+
+
+@app.route("/api/new-enrollments/run", methods=["POST"])
+def new_enrollments_run():
+    body = request.get_json(force=True)
+    from_month = body.get("from", "")
+    to_month   = body.get("to", "")
+    redownload = body.get("redownload", False)
+
+    cmd = [PYTHON, "main.py"]
+    if from_month:
+        cmd += ["--from", from_month]
+    if to_month:
+        cmd += ["--to", to_month]
+    if not redownload:
+        cmd.append("--no-download")
+
+    def generate():
+        try:
+            process = subprocess.Popen(
+                cmd,
+                cwd="/Users/mattdiamond/mathnasium-new-enrollments",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                env={**os.environ, "PYTHONUNBUFFERED": "1"},
+            )
+            for line in process.stdout:
+                yield f"data: {json.dumps(line.rstrip())}\n\n"
+            process.wait()
+            if process.returncode != 0:
+                yield f"data: {json.dumps(f'__ERROR__ (exit code {process.returncode})')}\n\n"
+            else:
+                yield f"data: {json.dumps('__DONE__')}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps(f'Error: {e}')}\n\n"
+            yield f"data: {json.dumps('__ERROR__')}\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.route("/new-enrollments/download/<center>")
+def new_enrollments_download(center):
+    from flask import send_file
+    files = {
+        "teaneck":   "/Users/mattdiamond/mathnasium-new-enrollments/output/NewEnrollments_Teaneck.xlsx",
+        "englewood": "/Users/mattdiamond/mathnasium-new-enrollments/output/NewEnrollments_Englewood.xlsx",
+    }
+    path = files.get(center.lower())
+    if not path or not os.path.exists(path):
+        return "File not found", 404
+    return send_file(path, as_attachment=True)
 
 
 @app.route("/scheduling-report")
