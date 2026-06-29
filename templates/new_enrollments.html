@@ -39,9 +39,9 @@
           </div>
         </div>
         <div class="form-check mb-3">
-          <input class="form-check-input" type="checkbox" id="redownload">
+          <input class="form-check-input" type="checkbox" id="redownload" checked>
           <label class="form-check-label" for="redownload">
-            Re-download data from Radius <span class="text-muted">(slower)</span>
+            Re-download data from Radius
           </label>
         </div>
         <button id="runBtn" class="btn btn-primary" disabled>
@@ -73,20 +73,20 @@
   </div>
 
   <script>
+    const fromInput = document.getElementById("fromMonth");
+    const toInput   = document.getElementById("toMonth");
+    const runBtn    = document.getElementById("runBtn");
+
     // Default: "From" = 12 months ago, "To" = current month
     (function() {
       const now = new Date();
       const toVal = now.toISOString().slice(0, 7);
       const fromDate = new Date(now.getFullYear(), now.getMonth() - 12, 1);
       const fromVal = fromDate.toISOString().slice(0, 7);
-      document.getElementById("fromMonth").value = fromVal;
-      document.getElementById("toMonth").value = toVal;
+      fromInput.value = fromVal;
+      toInput.value = toVal;
       checkReady();
     })();
-
-    const fromInput = document.getElementById("fromMonth");
-    const toInput   = document.getElementById("toMonth");
-    const runBtn    = document.getElementById("runBtn");
 
     fromInput.addEventListener("input", checkReady);
     toInput.addEventListener("input", checkReady);
