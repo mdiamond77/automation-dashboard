@@ -253,6 +253,17 @@ REPORTS = [
         "description": "New student enrollments by month with program type and amount charged.",
     },
     {
+        "id": "lead-enrollment-tracker",
+        "name": "Lead and Enrollment Tracker",
+        "schedule": "Every Friday",
+        "script_id": None,
+        "group": "tools",
+        "run_log_path": None,
+        "tool_link": "https://docs.google.com/spreadsheets/d/11A5LI_EJK17EtlQrlYw6C95imM6IOKsgt-SgpUbd3KI",
+        "icon": "📊",
+        "description": "Lead funnel and enrollment trends by month and quarter. Updated automatically every Friday.",
+    },
+    {
         "id": "current-students-spreadsheet",
         "name": "Current Students Spreadsheet",
         "schedule": "4th of month",
