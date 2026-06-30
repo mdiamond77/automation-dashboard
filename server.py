@@ -73,6 +73,14 @@ SCRIPTS = {
         "confirm": "Have you finished editing the content in Constant Contact?",
         "before": ["radius-cc-lists"],
     },
+    "lead-enrollment-tracker": {
+        "name": "Lead and Enrollment Tracker",
+        "description": "Triggers the GitHub Actions workflow to refresh the Lead and Enrollment Tracker Google Sheet.",
+        "command": ["gh", "workflow", "run", "run.yml", "--repo", "mdmathnasiums/radius-dashboard"],
+        "cwd": "/Users/mattdiamond/radius-dashboard",
+        "icon": "📊",
+        "category": "Mathnasium",
+    },
 
 }
 
@@ -255,13 +263,13 @@ REPORTS = [
     {
         "id": "lead-enrollment-tracker",
         "name": "Lead and Enrollment Tracker",
-        "schedule": "Every Friday",
-        "script_id": None,
+        "schedule": "Nightly",
+        "script_id": "lead-enrollment-tracker",
         "group": "tools",
         "run_log_path": None,
         "tool_link": "https://docs.google.com/spreadsheets/d/11A5LI_EJK17EtlQrlYw6C95imM6IOKsgt-SgpUbd3KI",
         "icon": "📊",
-        "description": "Lead funnel and enrollment trends by month and quarter. Updated automatically every Friday.",
+        "description": "Lead funnel and enrollment trends by month and quarter. Updated automatically every night.",
     },
     {
         "id": "current-students-spreadsheet",
