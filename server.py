@@ -76,7 +76,7 @@ SCRIPTS = {
     "lead-enrollment-tracker": {
         "name": "Lead and Enrollment Tracker",
         "description": "Triggers the GitHub Actions workflow to refresh the Lead and Enrollment Tracker Google Sheet.",
-        "command": ["gh", "workflow", "run", "run.yml", "--repo", "mdmathnasiums/radius-dashboard"],
+        "command": ["/opt/homebrew/bin/gh", "workflow", "run", "run.yml", "--repo", "mdmathnasiums/radius-dashboard"],
         "cwd": "/Users/mattdiamond/radius-dashboard",
         "icon": "📊",
         "category": "Mathnasium",
