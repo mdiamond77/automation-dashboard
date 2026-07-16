@@ -12,7 +12,7 @@ def _make_result(needs_eng=None, manual_eng=None, good_eng=None,
                  needs_tea=None, manual_tea=None, good_tea=None):
     """Build a minimal result dict with the given rows per center/group."""
     cols = ["Student Name", "Center", "2026-02", "2026-03", "2026-04",
-            "Threshold", "ThresholdType", "2026-05", "2026-06", "short_1", "short_2"]
+            "Threshold", "ThresholdType", "appt_2026-05", "appt_2026-06", "short_1", "short_2"]
 
     def rows_to_df(rows):
         if not rows:
@@ -29,6 +29,7 @@ def _make_result(needs_eng=None, manual_eng=None, good_eng=None,
         "good": rows_to_df(good_rows),
         "recent_months": ["2026-02", "2026-03", "2026-04"],
         "future_months": ["2026-05", "2026-06"],
+        "future_cols": ["appt_2026-05", "appt_2026-06"],
         "primary_col": "2026-04",
         "secondary_col": "2026-03",
         "warning_center": None,

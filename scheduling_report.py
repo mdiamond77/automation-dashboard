@@ -64,22 +64,30 @@ def run_scheduling_report(workout_plan_path, appointy_path) -> dict:
     missing = expected_centers - appointy_centers
     warning_center = missing.pop() if len(missing) == 1 else None
 
+    if not future_months:
+        raise ValueError("Appointy file contains no confirmed appointments. Check your export.")
+
     fc = confirmed.groupby(["Student Name", "Center", "Month"]).size().unstack(fill_value=0)
     for m in future_months:
         if m not in fc.columns:
             fc[m] = 0
-    if not future_months:
-        raise ValueError("Appointy file contains no confirmed appointments. Check your export.")
-    elif len(future_months) == 1:
-        fc = fc[future_months].reset_index()
-        future_col_1 = str(future_months[0])
+
+    # Prefix appointment columns to avoid merge collision when a future month
+    # overlaps with a recent month already present in the active DataFrame.
+    if len(future_months) == 1:
+        future_col_1_raw = str(future_months[0])
+        future_col_2_raw = future_col_1_raw
+        future_col_1 = "appt_" + future_col_1_raw
         future_col_2 = future_col_1
+        fc = fc[future_months].reset_index()
         fc.columns = ["Student Name", "Center", future_col_1]
         fc = fc.assign(**{future_col_2: fc[future_col_1]})
     else:
+        future_col_1_raw = str(future_months[0])
+        future_col_2_raw = str(future_months[1])
+        future_col_1 = "appt_" + future_col_1_raw
+        future_col_2 = "appt_" + future_col_2_raw
         fc = fc[future_months].reset_index()
-        future_col_1 = str(future_months[0])
-        future_col_2 = str(future_months[1])
         fc.columns = ["Student Name", "Center", future_col_1, future_col_2]
 
     # ── 8. Merge and flag gaps ────────────────────────────────────────────────
@@ -116,7 +124,8 @@ def run_scheduling_report(workout_plan_path, appointy_path) -> dict:
         "manual": manual,
         "good": good,
         "recent_months": [str(m) for m in recent_months],
-        "future_months": [future_col_1, future_col_2],
+        "future_months": [future_col_1_raw, future_col_2_raw],
+        "future_cols": [future_col_1, future_col_2],
         "primary_col": primary_col,
         "secondary_col": secondary_col,
         "warning_center": warning_center,

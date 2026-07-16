@@ -81,7 +81,7 @@ def result(workout_plan_file, appointy_file):
 
 def test_result_keys(result):
     assert set(result.keys()) >= {"needs", "manual", "good", "recent_months",
-                                   "future_months", "primary_col", "secondary_col",
+                                   "future_months", "future_cols", "primary_col", "secondary_col",
                                    "warning_center"}
 
 
@@ -91,6 +91,7 @@ def test_recent_months_are_last_three(result):
 
 def test_future_months_are_next_two(result):
     assert result["future_months"] == ["2026-05", "2026-06"]
+    assert result["future_cols"] == ["appt_2026-05", "appt_2026-06"]
 
 
 def test_primary_and_secondary_cols(result):
@@ -168,7 +169,7 @@ def test_cancelled_appointments_excluded(result):
     all_students = pd.concat([result["needs"], result["manual"], result["good"]])
     dan = all_students[all_students["Student Name"] == "Dan Brown"].iloc[0]
     # Dan has 2 confirmed + 1 cancelled in May. Only 2 should count.
-    assert dan["2026-05"] == 2
+    assert dan["appt_2026-05"] == 2
 
 
 # ── Warning detection ─────────────────────────────────────────────────────────

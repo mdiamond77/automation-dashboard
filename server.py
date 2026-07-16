@@ -71,6 +71,7 @@ SCRIPTS = {
         "icon": "📧",
         "category": "Mathnasium",
         "confirm": "Have you finished editing the content in Constant Contact?",
+        "month_prompt": True,
         "before": ["radius-cc-lists"],
     },
     "lead-enrollment-tracker": {
@@ -152,6 +153,15 @@ SCRIPTS["activity-report"] = {
     "icon": "📋",
     "category": "Mathnasium",
     "hidden": True,
+}
+
+SCRIPTS["school-partnership-report"] = {
+    "name": "Ridgefield Park Progress Report",
+    "description": "Downloads fresh data from Radius and generates the school partnership progress report (Excel + PDF) for Ridgefield Park students.",
+    "command": [PYTHON, "main.py"],
+    "cwd": "/Users/mattdiamond/mathnasium-school-partnership-report",
+    "icon": "🏫",
+    "category": "Mathnasium",
 }
 
 # ── Reports registry ──────────────────────────────────────────────────────────
@@ -272,6 +282,16 @@ REPORTS = [
         "description": "Lead funnel and enrollment trends by month and quarter. Updated automatically every night.",
     },
     {
+        "id": "school-partnership-report",
+        "name": "Ridgefield Park Progress Report",
+        "schedule": "On demand",
+        "script_id": "school-partnership-report",
+        "group": "tools",
+        "run_log_path": None,
+        "icon": "🏫",
+        "description": "Generates the school partnership progress report (Excel + PDF) for Ridgefield Park students.",
+    },
+    {
         "id": "current-students-spreadsheet",
         "name": "Current Students Spreadsheet",
         "schedule": "4th of month",
@@ -342,6 +362,7 @@ def index():
             "icon":        script.get("icon") or report.get("icon", "📄"),
             "description": script.get("description") or report.get("description", ""),
             "confirm":     script.get("confirm"),
+            "month_prompt": script.get("month_prompt"),
             "last_auto":   _fmt_run(auto_runs[-1]   if auto_runs   else None),
             "last_manual": _fmt_run(manual_runs[-1] if manual_runs else None),
         }
@@ -358,6 +379,7 @@ def run_script(script_id):
         return "Script not found", 404
 
     script = SCRIPTS[script_id]
+    month = request.args.get("month", "").strip()
     sequence = [
         SCRIPTS[sid] for sid in script.get("before", []) if sid in SCRIPTS
     ] + [script]
@@ -369,8 +391,9 @@ def run_script(script_id):
             if len(sequence) > 1:
                 yield f"data: {json.dumps('▶ ' + s['name'])}\n\n"
             try:
+                cmd = s["command"] + (["--month", month] if month and s is script else [])
                 process = subprocess.Popen(
-                    s["command"],
+                    cmd,
                     cwd=s["cwd"],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
@@ -579,35 +602,36 @@ def _serialize_result(result: dict) -> dict:
             return "yellow"
         return ""
 
-    def issue_text(row, future_months, threshold_type):
+    def issue_text(row, future_cols, future_months_display, threshold_type):
         if threshold_type == "good":
             return ""
         parts = []
-        for col in future_months:
+        for col, month_str in zip(future_cols, future_months_display):
             count = int(row[col])
             threshold = int(row["Threshold"])
             if threshold_type == "manual":
-                parts.append(f"{fmt_month(col)}: {count} scheduled")
+                parts.append(f"{fmt_month(month_str)}: {count} scheduled")
             elif count < threshold:
-                parts.append(f"{fmt_month(col)}: {count} (need {threshold})")
+                parts.append(f"{fmt_month(month_str)}: {count} (need {threshold})")
         return " | ".join(parts)
 
     def df_records(df, group_key):
         records = []
+        future_cols = result["future_cols"]
+        future_months_display = result["future_months"]
         for _, row in df.iterrows():
             threshold = int(row["Threshold"])
-            future_months = result["future_months"]
             records.append({
                 "name": str(row["Student Name"]),
                 "center": str(row["Center"]),
                 "sessions": [int(row[m]) for m in result["recent_months"]],
                 "threshold": threshold,
                 "threshold_type": str(row["ThresholdType"]),
-                "future": [int(row[m]) for m in future_months],
-                "future_bg": [cell_bg(int(row[m]), threshold) for m in future_months],
+                "future": [int(row[m]) for m in future_cols],
+                "future_bg": [cell_bg(int(row[m]), threshold) for m in future_cols],
                 "short_1": bool(row["short_1"]),
                 "short_2": bool(row["short_2"]),
-                "issue": issue_text(row, future_months, group_key),
+                "issue": issue_text(row, future_cols, future_months_display, group_key),
             })
         return records
 

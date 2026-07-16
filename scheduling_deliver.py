@@ -37,17 +37,17 @@ def _cell_bg(count: int, threshold: int) -> str:
     return ""
 
 
-def _issue_text(row, future_months: list, section: str) -> str:
+def _issue_text(row, future_cols: list, future_months_display: list, section: str) -> str:
     if section == "good":
         return ""
     parts = []
-    for col in future_months:
+    for col, month_str in zip(future_cols, future_months_display):
         count = int(row[col])
         threshold = int(row["Threshold"])
         if section == "needs" and count < threshold:
-            parts.append(f"{_fmt_month(col)}: {count} (need {threshold})")
+            parts.append(f"{_fmt_month(month_str)}: {count} (need {threshold})")
         elif section == "manual":
-            parts.append(f"{_fmt_month(col)}: {count} scheduled")
+            parts.append(f"{_fmt_month(month_str)}: {count} scheduled")
     return " | ".join(parts)
 
 
@@ -65,7 +65,7 @@ def _td(text: str, bg: str = "") -> str:
     return f"<td style='{style}'>{text}</td>"
 
 
-def _section_html(section: str, df, recent_months: list, future_months: list) -> str:
+def _section_html(section: str, df, recent_months: list, future_months: list, future_cols: list) -> str:
     color = SECTION_COLORS[section]
     label = SECTION_LABELS[section]
 
@@ -84,10 +84,10 @@ def _section_html(section: str, df, recent_months: list, future_months: list) ->
     for _, row in df.iterrows():
         threshold = int(row["Threshold"])
         future_tds = "".join(
-            _td(str(int(row[m])), _cell_bg(int(row[m]), threshold))
-            for m in future_months
+            _td(str(int(row[col])), _cell_bg(int(row[col]), threshold))
+            for col in future_cols
         )
-        issue = _issue_text(row, future_months, section)
+        issue = _issue_text(row, future_cols, future_months, section)
         cells = (
             _td(str(row["Student Name"]))
             + "".join(_td(str(int(row[m]))) for m in recent_months)
@@ -115,6 +115,7 @@ def _section_html(section: str, df, recent_months: list, future_months: list) ->
 def build_center_html(center: str, result: dict) -> str:
     recent = result["recent_months"]
     future = result["future_months"]
+    future_cols = result.get("future_cols", future)
 
     sections_html = ""
     for section in ["needs", "manual", "good"]:
@@ -122,7 +123,7 @@ def build_center_html(center: str, result: dict) -> str:
         center_df = df[df["Center"] == center]
         if center_df.empty:
             continue
-        sections_html += _section_html(section, center_df, recent, future)
+        sections_html += _section_html(section, center_df, recent, future, future_cols)
 
     divider = "<hr style='border:none;border-top:1px solid #ddd;margin:20px 0;'>"
     body = (
