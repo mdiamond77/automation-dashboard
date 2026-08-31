@@ -14,7 +14,7 @@ def run_scheduling_report(workout_plan_path, appointy_path) -> dict:
 
     # ── 2. Dynamic month detection ────────────────────────────────────────────
     wp_months = sorted(wp["Month"].unique())
-    recent_months = wp_months[-3:]
+    recent_months = wp_months[-4:]
     primary_month = recent_months[-1]
     secondary_month = recent_months[-2]
 

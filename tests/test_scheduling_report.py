@@ -13,21 +13,28 @@ from scheduling_report import run_scheduling_report
 @pytest.fixture
 def workout_plan_file(tmp_path):
     rows = [
-        # Alice Smith (Englewood): 8 sessions Apr, 7 Mar, 5 Feb → confirmed threshold 8
+        # Alice Smith (Englewood): 8 sessions Apr, 7 Mar, 5 Feb, 6 Jan → confirmed threshold 8
         *[{"Student Name": "Alice Smith", "Date": f"04/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 9)],
         *[{"Student Name": "Alice Smith", "Date": f"03/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 8)],
         *[{"Student Name": "Alice Smith", "Date": f"02/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 6)],
+        *[{"Student Name": "Alice Smith", "Date": f"01/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 7)],
         # Bob Jones (Teaneck): 3 sessions Apr → manual_check threshold 4
         *[{"Student Name": "Bob Jones", "Date": f"04/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 4)],
         *[{"Student Name": "Bob Jones", "Date": f"03/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 6)],
+        *[{"Student Name": "Bob Jones", "Date": f"02/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 4)],
+        *[{"Student Name": "Bob Jones", "Date": f"01/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 3)],
         # Carol Davis (Englewood): 5 Apr, 7 Mar → inferred threshold 8 (secondary ≥ 6)
         *[{"Student Name": "Carol Davis", "Date": f"04/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 6)],
         *[{"Student Name": "Carol Davis", "Date": f"03/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 8)],
+        *[{"Student Name": "Carol Davis", "Date": f"02/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 4)],
+        *[{"Student Name": "Carol Davis", "Date": f"01/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 6)],
         # Dan Brown (Teaneck): 5 Apr, 4 Mar → inferred threshold 4 (secondary < 6)
         *[{"Student Name": "Dan Brown", "Date": f"04/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 6)],
         *[{"Student Name": "Dan Brown", "Date": f"03/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 5)],
-        # Eve Wilson (Englewood): only Feb sessions → inactive, must be excluded
-        *[{"Student Name": "Eve Wilson", "Date": f"02/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 6)],
+        *[{"Student Name": "Dan Brown", "Date": f"02/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 3)],
+        *[{"Student Name": "Dan Brown", "Date": f"01/{d:02d}/2026", "Center": "Teaneck"} for d in range(1, 4)],
+        # Eve Wilson (Englewood): only Jan sessions → inactive, must be excluded
+        *[{"Student Name": "Eve Wilson", "Date": f"01/{d:02d}/2026", "Center": "Englewood"} for d in range(1, 6)],
         # Frank Lee: "Englewood, Teaneck Virtual" center → must map to Englewood
         {"Student Name": "Frank Lee", "Date": "04/01/2026", "Center": "Englewood, Teaneck Virtual"},
     ]
@@ -85,8 +92,8 @@ def test_result_keys(result):
                                    "warning_center"}
 
 
-def test_recent_months_are_last_three(result):
-    assert result["recent_months"] == ["2026-02", "2026-03", "2026-04"]
+def test_recent_months_are_last_four(result):
+    assert result["recent_months"] == ["2026-01", "2026-02", "2026-03", "2026-04"]
 
 
 def test_future_months_are_next_two(result):
