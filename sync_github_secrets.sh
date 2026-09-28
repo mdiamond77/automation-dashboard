@@ -34,6 +34,7 @@ REPOS=(
   mdiamond77/mathnasium-appointy-export
   mdiamond77/radius-morning-briefing
   mdiamond77/mathnasium-assessment-email-automation
+  mdiamond77/mathnasium-scheduling-report
 )
 
 SECRETS=(RADIUS_USERNAME RADIUS_PASSWORD SMTP_USER SMTP_PASSWORD)

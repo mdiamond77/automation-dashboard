@@ -125,6 +125,17 @@ SCRIPTS["binder-audit"] = {
     "hidden": True,
 }
 
+SCRIPTS["scheduling-report"] = {
+    "name": "Scheduling Report",
+    "description": "Emails each center director every current student's attended and scheduled sessions, flagging who needs appointments for the next two months.",
+    "command": [PYTHON, "main.py", "--trigger", "manual"],
+    "cwd": "/Users/mattdiamond/mathnasium-scheduling-report",
+    "icon": "📅",
+    "category": "Mathnasium",
+    "hidden": True,
+    "confirm": "This emails the Scheduling Report to both center directors. Send now?",
+}
+
 SCRIPTS["monthly-revenue-changes"] = {
     "name": "Monthly Revenue Changes",
     "description": "Detects account-level revenue changes from Radius Payment Reconciliation and emails AI-narrated summaries to center directors.",
@@ -205,6 +216,15 @@ REPORTS = [
         "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-binder-audit/main/run_log.json",
     },
     {
+        "id": "scheduling-report",
+        "name": "Scheduling Report",
+        "schedule": "21st of month",
+        "script_id": "scheduling-report",
+        "group": "emails",
+        "run_log_path": "/Users/mattdiamond/mathnasium-scheduling-report/run_log.json",
+        "run_log_url": "https://raw.githubusercontent.com/mdiamond77/mathnasium-scheduling-report/main/run_log.json",
+    },
+    {
         "id": "attendance-alerts",
         "name": "Attendance Alerts",
         "schedule": "Weekly (Monday)",
@@ -247,17 +267,6 @@ REPORTS = [
         "script_id": "cc-newsletter",
         "group": "tools",
         "run_log_path": None,
-    },
-    {
-        "id": "scheduling-report",
-        "name": "Scheduling Report",
-        "schedule": "Monthly",
-        "script_id": None,
-        "group": "tools",
-        "run_log_path": None,
-        "tool_link": "/scheduling-report",
-        "icon": "📅",
-        "description": "Identifies students who need appointments booked for the next two months.",
     },
     {
         "id": "new-enrollments",
