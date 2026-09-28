@@ -6,15 +6,18 @@
 
 set -e
 
-ENV_FILE="$HOME/.mathnasium.env"
+ENV_FILE="$HOME/.mathnasium_env"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Error: $ENV_FILE not found."
   exit 1
 fi
 
-# Load env vars from file
-export $(grep -v '^#' "$ENV_FILE" | grep '=' | xargs)
+# Load only the shared secrets (the file also holds multi-line JSON values
+# that break a blanket export).
+for var in RADIUS_USERNAME RADIUS_PASSWORD SMTP_USER SMTP_PASSWORD; do
+  export "$var=$(grep -m1 "^$var=" "$ENV_FILE" | cut -d= -f2-)"
+done
 
 # Verify all secrets are set
 for var in RADIUS_USERNAME RADIUS_PASSWORD SMTP_USER SMTP_PASSWORD; do
